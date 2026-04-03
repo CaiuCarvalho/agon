@@ -93,10 +93,37 @@ O resultado da auditoria deve sempre seguir este template:
 
 ---
 
-## 6. REGRA FINAL
+---
+
+## 7. 🔒 SEGURANÇA & SIGILO
+
+O projeto Agon impõe um **Gate de Segurança Absoluto** contra o vazamento de segredos.
+
+### 🔴 Violações Críticas (Bloqueio Imediato)
+- **Produção**: Uso de chaves reais (`sk_live_`, `ghp_`, `AIza_`).
+- **Infraestrutura**: Arquivos `.env` rastreados pelo Git ou fora do `.gitignore`.
+- **Protocolo**: Authorization Bearer hardcoded no código fonte.
+- **Bypass Inválido**: Uso de `// sdd-ignore-secret` sem o parâmetro obrigatório `reason`.
+
+### 🟡 Alinhamento Médio
+- **Placeholders de Teste**: `sk_test_` fora de diretórios de `/mocks` ou `/tests`.
+- **Heurística**: Strings de alta entropia (> 32 chars) ou padrões JWT/Base64 suspeitos.
+- **Fallbacks**: Uso de `process.env.KEY || "fallback"` com valores reais.
+
+### 🤖 Regras para Geração por Agentes (AI)
+Para garantir a segurança, qualquer agente deve:
+- **NUNCA** gerar chaves reais; use sempre placeholders como `"sk_test_xxx"`.
+- **NUNCA** hardcodar segredos; utilize sempre `process.env`.
+- **NUNCA** criar arquivos `.env` fora do padrão documentado.
+- **SEMPRE** justificar bypasses usando `// sdd-ignore-secret: reason=<motivo>`.
+
+---
+
+## 8. REGRA FINAL
 
 Se houver inconsistência entre o **Código** e a **Referência**:
 - **Opção A**: Corrigir o código para espelhar a referência (Padrão).
 - **Opção B**: Se a mudança no código for intencional e melhor, a documentação de **Referência/Decisões** deve ser atualizada antes da aprovação.
 
 **NUNCA** ignore uma divergência. Se a regra mudou, a documentação deve mudar.
+
