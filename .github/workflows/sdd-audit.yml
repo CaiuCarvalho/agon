@@ -1,0 +1,57 @@
+name: SDD Audit Governance
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: Run SDD Audit
+        id: sdd_audit
+        run: npm run audit
+        continue-on-error: true
+
+      - name: Post PR Comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const report = fs.readFileSync('scripts/audit-report.md', 'utf8');
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: report
+            })
+
+      - name: Final Check (Audit Gate)
+        run: |
+          if [ -f "scripts/audit-results.json" ]; then
+             # O script sdd-score já faz exit 1 se falhar, 
+             # mas garantimos aqui a integridade do CI.
+             npm run audit
+          else
+             echo "Audit results not found."
+             exit 1
+          fi

@@ -1,0 +1,115 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root, .dark {
+    /* Nike Premium Deep Dark Blue */
+    --background: 220 80% 6%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 60% 8%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 60% 8%;
+    --popover-foreground: 0 0% 98%;
+
+    /* Brasil Green: #009C3B */
+    --primary: 143 100% 31%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Brasil Yellow: #FFDF00 */
+    --secondary: 52 100% 50%;
+    --secondary-foreground: 220 80% 6%;
+
+    /* Deep Muted Blue for subtle contrast */
+    --muted: 220 40% 12%;
+    --muted-foreground: 220 20% 65%;
+
+    /* Accent matching primary/secondary */
+    --accent: 52 100% 50%;
+    --accent-foreground: 220 80% 6%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 220 40% 15%;
+    --input: 220 40% 15%;
+    --ring: 143 100% 31%;
+
+    --radius: 0.75rem;
+
+    --sidebar-background: 220 80% 6%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 52 100% 50%;
+    --sidebar-primary-foreground: 220 80% 6%;
+    --sidebar-accent: 220 40% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 40% 15%;
+    --sidebar-ring: 52 100% 50%;
+  }
+}
+
+@layer base {
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    @apply bg-background text-foreground font-body antialiased selection:bg-primary selection:text-white;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tighter uppercase;
+  }
+}
+
+@layer utilities {
+  .text-gradient-brasil {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, hsl(152 100% 31%), hsl(51 100% 50%));
+  }
+
+  .bg-gradient-nike {
+    background-image: radial-gradient(circle at top right, rgba(0, 156, 59, 0.15), transparent 40%),
+                      radial-gradient(circle at bottom left, rgba(255, 223, 0, 0.05), transparent 40%);
+  }
+
+  .shadow-nike {
+    box-shadow: 0 20px 40px -20px rgba(0, 0, 0, 0.5);
+  }
+
+  .glass-nike {
+    @apply bg-background/60 backdrop-blur-xl border-border/50;
+  }
+  .shadow-huge {
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8), 
+                0 0 40px -10px rgba(0, 156, 59, 0.15);
+  }
+
+  .shadow-neon {
+    box-shadow: 0 0 20px -5px rgba(0, 156, 59, 0.4);
+  }
+
+  .shadow-neon-intense {
+    box-shadow: 0 0 40px -5px rgba(0, 156, 59, 0.6);
+  }
+
+  /* Custom Scrollbar Premium Agon */
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.2);
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary) / 0.5);
+  }
+}
+

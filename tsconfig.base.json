@@ -1,0 +1,17 @@
+@"{
+    "compilerOptions": {
+        "baseUrl": ".",
+        "paths": {
+            "@agon/types/*": [
+                "packages/types/*"
+            ],
+            "@agon/utils/*": [
+                "packages/utils/*"
+            ],
+            "@agon/config/*": [
+                "packages/config/*"
+            ]
+        }
+    }
+}
+"@ | Out-File tsconfig.base.json
