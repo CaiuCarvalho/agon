@@ -6,26 +6,27 @@ export type { UserAuth };
 
 /**
  * useAuth Hook
- * Now a simple wrapper around AuthProvider to maintain compatibility 
- * with existing components while providing global state synchronization.
+ * Wrapper around AuthProvider mantendo compatibilidade com componentes existentes
  */
 export function useAuth() {
   const { 
     user, 
-    token, 
+    session,
     isLoading, 
     isAuthenticated, 
     login, 
+    signup,
     logout, 
     updateUser 
   } = useAuthContext();
 
   return { 
     user, 
-    token, 
+    token: session?.access_token || null,
     isLoading, 
     isAuthenticated, 
     login, 
+    signup,
     logout, 
     updateUser 
   };

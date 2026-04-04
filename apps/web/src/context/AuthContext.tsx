@@ -2,7 +2,8 @@
 
 import React, { createContext, useState, useEffect, useCallback, useContext } from "react";
 import { useRouter } from "next/navigation";
-import Cookies from "js-cookie";
+import { createClient } from "@/lib/supabase/client";
+import type { User, Session } from "@supabase/supabase-js";
 
 export interface UserAuth {
   id: string;
@@ -16,149 +17,178 @@ export interface UserAuth {
 
 interface AuthContextType {
   user: UserAuth | null;
-  token: string | null;
+  session: Session | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (userData: UserAuth, jwtToken: string) => void;
-  logout: () => void;
-  updateUser: (newData: Partial<UserAuth>) => void;
+  login: (email: string, password: string) => Promise<void>;
+  signup: (email: string, password: string, name: string) => Promise<void>;
+  logout: () => Promise<void>;
+  updateUser: (newData: Partial<UserAuth>) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const AUTH_COOKIE_NAME = "vitta_token";
-const USER_LOCAL_STORAGE = "vitta_user";
-
-function decodeJwtPayload(token: string): Record<string, any> | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length !== 3) return null;
-    const payload = atob(parts[1].replace(/-/g, "+").replace(/_/g, "/"));
-    return JSON.parse(payload);
-  } catch {
-    return null;
-  }
-}
-
-function isTokenExpired(token: string): boolean {
-  try {
-    const payload = decodeJwtPayload(token);
-    if (!payload) return true;
-    
-    // Se o backend não enviar 'exp' (erro anterior), verificamos o 'iat' ou apenas permitimos
-    if (typeof payload.exp !== "number") {
-      console.warn("[Auth] Token without 'exp' claim. Checking 'iat'...");
-      if (typeof payload.iat === "number") {
-        // Válido por pelo menos 4 horas se não houver expiração explícita
-        return Date.now() >= (payload.iat + (4 * 3600)) * 1000;
-      }
-      return false; // Assume válido se não tiver info nenhuma
-    }
-
-    // Margem de 30 segundos para clock skew
-    const now = Math.floor(Date.now() / 1000);
-    return now >= (payload.exp - 30);
-  } catch {
-    return true;
-  }
+function mapSupabaseUserToUserAuth(user: User, profile: { name?: string; role?: string; avatar_url?: string; tax_id?: string; phone?: string } | null): UserAuth {
+  return {
+    id: user.id,
+    email: user.email!,
+    name: profile?.name || user.user_metadata?.name || "",
+    role: profile?.role || "customer",
+    avatarUrl: profile?.avatar_url || user.user_metadata?.avatar_url,
+    taxId: profile?.tax_id,
+    phone: profile?.phone,
+  };
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<UserAuth | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const supabase = createClient();
 
-  const clearAuth = useCallback(() => {
-    if (typeof window !== "undefined") {
-      Cookies.remove(AUTH_COOKIE_NAME);
-      localStorage.removeItem(AUTH_COOKIE_NAME); // Limpa também o LS por segurança
-      localStorage.removeItem(USER_LOCAL_STORAGE);
+  const loadUserProfile = useCallback(async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      
+      return profile;
+    } catch (error) {
+      console.error("[Auth] Error loading profile:", error);
+      return null;
     }
-    setUser(null);
-    setToken(null);
-  }, []);
+  }, [supabase]);
+
+  const initializeAuth = useCallback(async () => {
+    try {
+      const { data: { session: currentSession } } = await supabase.auth.getSession();
+      
+      if (currentSession?.user) {
+        const profile = await loadUserProfile(currentSession.user.id);
+        setSession(currentSession);
+        setUser(mapSupabaseUserToUserAuth(currentSession.user, profile));
+      }
+    } catch (error) {
+      console.error("[Auth] Error during initialization:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [supabase, loadUserProfile]);
 
   useEffect(() => {
-    const initializeAuth = async () => {
-      try {
-        if (typeof window !== "undefined") {
-          const storedToken = Cookies.get(AUTH_COOKIE_NAME) || localStorage.getItem(AUTH_COOKIE_NAME);
-          const storedUser = localStorage.getItem(USER_LOCAL_STORAGE);
-
-          if (storedToken && storedUser) {
-            if (isTokenExpired(storedToken)) {
-              console.warn("[Auth] Token expired");
-              clearAuth();
-            } else {
-              const userData = JSON.parse(storedUser);
-              setToken(storedToken);
-              setUser(userData);
-              
-              if (!Cookies.get(AUTH_COOKIE_NAME)) {
-                Cookies.set(AUTH_COOKIE_NAME, storedToken, { expires: 7, path: "/" });
-              }
-            }
-          } else {
-            // Sessão não encontrada
-          }
-        }
-      } catch (error) {
-        console.error("[Auth] Error during initialization:", error);
-        clearAuth();
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     initializeAuth();
-  }, [clearAuth]);
 
-  const login = useCallback((userData: UserAuth, jwtToken: string) => {
-    // login iniciado
-    if (typeof window !== "undefined") {
-      Cookies.set(AUTH_COOKIE_NAME, jwtToken, { expires: 7, path: "/" });
-      localStorage.setItem(AUTH_COOKIE_NAME, jwtToken);
-      localStorage.setItem(USER_LOCAL_STORAGE, JSON.stringify(userData));
-    }
-    setToken(jwtToken);
-    setUser(userData);
-    
-    setTimeout(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, currentSession) => {
+        console.log("[Auth] State change:", event);
+
+        if (currentSession?.user) {
+          const profile = await loadUserProfile(currentSession.user.id);
+          setSession(currentSession);
+          setUser(mapSupabaseUserToUserAuth(currentSession.user, profile));
+        } else {
+          setSession(null);
+          setUser(null);
+        }
+
+        if (event === "SIGNED_OUT") {
+          router.push("/login");
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, [supabase, router, initializeAuth, loadUserProfile]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) throw error;
+
+    if (data.user) {
+      const profile = await loadUserProfile(data.user.id);
+      setSession(data.session);
+      setUser(mapSupabaseUserToUserAuth(data.user, profile));
+      
       router.refresh();
       const params = new URLSearchParams(window.location.search);
       const redirect = params.get("redirect") || "/";
       router.push(redirect);
-    }, 150);
-  }, [router]);
+    }
+  }, [supabase, router, loadUserProfile]);
 
-  const logout = useCallback(() => {
-    clearAuth();
-    setTimeout(() => {
-      router.refresh();
-      router.push("/login");
-    }, 100);
-  }, [clearAuth, router]);
-
-  const updateUser = useCallback((newData: Partial<UserAuth>) => {
-    setUser((prev) => {
-      if (!prev) return null;
-      const updated = { ...prev, ...newData };
-      localStorage.setItem(USER_LOCAL_STORAGE, JSON.stringify(updated));
-      return updated;
+  const signup = useCallback(async (email: string, password: string, name: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+        },
+      },
     });
-  }, []);
+
+    if (error) throw error;
+
+    if (data.user) {
+      const profile = await loadUserProfile(data.user.id);
+      setSession(data.session);
+      setUser(mapSupabaseUserToUserAuth(data.user, profile));
+      
+      router.refresh();
+      router.push("/");
+    }
+  }, [supabase, router, loadUserProfile]);
+
+  const logout = useCallback(async () => {
+    const { error } = await supabase.auth.signOut();
+    if (error) throw error;
+
+    setSession(null);
+    setUser(null);
+    router.refresh();
+    router.push("/login");
+  }, [supabase, router]);
+
+  const updateUser = useCallback(async (newData: Partial<UserAuth>) => {
+    if (!user) return;
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        name: newData.name,
+        avatar_url: newData.avatarUrl,
+        tax_id: newData.taxId,
+        phone: newData.phone,
+      })
+      .eq("id", user.id);
+
+    if (error) throw error;
+
+    setUser((prev) => (prev ? { ...prev, ...newData } : null));
+  }, [supabase, user]);
 
   return (
-    <AuthContext.Provider value={{
-      user,
-      token,
-      isAuthenticated: !!token,
-      isLoading,
-      login,
-      logout,
-      updateUser
-    }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        isAuthenticated: !!session,
+        isLoading,
+        login,
+        signup,
+        logout,
+        updateUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

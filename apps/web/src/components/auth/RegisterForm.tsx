@@ -11,7 +11,6 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { api } from "@/lib/api";
 
 const registerSchema = z
   .object({
@@ -33,7 +32,7 @@ interface RegisterFormProps {
 
 export function RegisterForm({ onToggleToLogin }: RegisterFormProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { signup } = useAuth();
 
   const {
     register,
@@ -47,22 +46,20 @@ export function RegisterForm({ onToggleToLogin }: RegisterFormProps) {
     setIsLoading(true);
 
     try {
-      const { data: result } = await api.post("/api/auth/register", {
-        name: data.name,
-        email: data.email,
-        password: data.password,
-      });
-
+      await signup(data.email, data.password, data.name);
       toast.success("Bem-vindo à Torcida Agon! Aproveite seu manto.");
-
-      if (result?.token) {
-        login(result.user, result.token);
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message?.includes("User already registered")) {
+          toast.error("Este e-mail já está cadastrado. Faça login.");
+        } else if (error.message?.includes("timeout")) {
+          toast.error("Conexão lenta. Tente novamente.");
+        } else {
+          toast.error(error.message || "Erro ao criar conta.");
+        }
       } else {
-        setTimeout(onToggleToLogin, 1500);
+        toast.error("Erro ao criar conta.");
       }
-
-    } catch (error: any) {
-      toast.error(error.message || "Erro de conexão com o servidor.");
     } finally {
       setIsLoading(false);
     }

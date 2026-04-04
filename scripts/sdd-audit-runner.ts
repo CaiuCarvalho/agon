@@ -56,7 +56,9 @@ function calculateEntropy(str: string): number {
 function getTrackedEnvFiles(): string[] {
   try {
     return execSync('git ls-files .env*', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] })
-      .split('\n').filter(Boolean);
+      .split('\n')
+      .filter(Boolean)
+      .filter(f => !f.endsWith('.env.example') && !f.endsWith('.env.production')); // Templates são seguros
   } catch { return []; }
 }
 

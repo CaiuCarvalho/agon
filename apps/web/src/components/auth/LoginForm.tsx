@@ -39,23 +39,20 @@ export function LoginForm({ onToggleToRegister, onToggleToForgot }: LoginFormPro
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://agonimports.com/api";
-      const response = await fetch(`${apiUrl}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-
-      const result = await response.json();
-
-      if (!response.ok) {
-        throw new Error(result.message || "E-mail ou senha incorretos.");
-      }
-
-      login(result.data.user, result.data.token);
+      await login(data.email, data.password);
       toast.success("Bem-vindo de volta, craque!");
-    } catch (error: any) {
-      toast.error(error.message || "Erro de conexão com o servidor.");
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.message?.includes("Invalid login credentials")) {
+          toast.error("E-mail ou senha incorretos.");
+        } else if (error.message?.includes("timeout")) {
+          toast.error("Conexão lenta. Tente novamente.");
+        } else {
+          toast.error(error.message || "Erro ao fazer login.");
+        }
+      } else {
+        toast.error("Erro ao fazer login.");
+      }
     } finally {
       setIsLoading(false);
     }
