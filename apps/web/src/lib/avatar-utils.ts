@@ -49,3 +49,26 @@ export async function compressImage(file: File, maxWidth = 400, quality = 0.8): 
     reader.onerror = reject;
   });
 }
+
+/**
+ * Validates that a file is an image and within size limits.
+ * Checks MIME type starts with 'image/' and enforces 5MB max file size.
+ * 
+ * @param file - The file to validate
+ * @returns true if file is a valid image within size limits, false otherwise
+ */
+export function validateImageFile(file: File): boolean {
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB in bytes
+  
+  // Check if MIME type starts with 'image/'
+  if (!file.type.startsWith('image/')) {
+    return false;
+  }
+  
+  // Check if file size is within limit
+  if (file.size > MAX_FILE_SIZE) {
+    return false;
+  }
+  
+  return true;
+}

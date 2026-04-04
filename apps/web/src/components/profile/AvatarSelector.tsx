@@ -9,7 +9,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CLASSIC_AVATARS, compressImage } from "@/lib/avatar-utils";
+import { CLASSIC_AVATARS, compressImage, validateImageFile } from "@/lib/avatar-utils";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Camera, Image as ImageIcon, Loader2, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -34,8 +34,13 @@ export function AvatarSelector({
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith("image/")) {
-      toast.error("Por favor, selecione uma imagem válida.");
+    // Validate image file (MIME type and size)
+    if (!validateImageFile(file)) {
+      if (!file.type.startsWith("image/")) {
+        toast.error("Por favor, selecione uma imagem válida.");
+      } else {
+        toast.error("Imagem muito grande. Máximo 5MB.");
+      }
       return;
     }
 

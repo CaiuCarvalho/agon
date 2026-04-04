@@ -52,6 +52,15 @@ export function maskCEP(value: string) {
 }
 
 /**
+ * Valida um telefone brasileiro (10-11 dígitos).
+ * Aceita formatos: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
+ */
+export function validatePhone(phone: string): boolean {
+  const cleanPhone = phone.replace(/\D/g, "");
+  return cleanPhone.length >= 10 && cleanPhone.length <= 11;
+}
+
+/**
  * Máscara para Telefone ((00) 00000-0000)
  */
 export function maskPhone(value: string) {
@@ -60,4 +69,39 @@ export function maskPhone(value: string) {
     .replace(/(\d{2})(\d)/, "($1) $2")
     .replace(/(\d{5})(\d)/, "$1-$2")
     .replace(/(-\d{4})\d+?$/, "$1");
+}
+
+/**
+ * Valida um CEP (Código de Endereçamento Postal) brasileiro.
+ * Aceita apenas strings com exatamente 8 dígitos.
+ */
+export function validateZipCode(zipCode: string): boolean {
+  const cleanZipCode = zipCode.replace(/\D/g, "");
+  return cleanZipCode.length === 8;
+}
+
+/**
+ * Valida um código de estado brasileiro (UF).
+ * Aceita apenas strings com exatamente 2 caracteres.
+ */
+export function validateState(state: string): boolean {
+  return state.length === 2;
+}
+
+/**
+ * Valida campos obrigatórios de endereço.
+ * Rejeita valores vazios ou apenas com espaços em branco.
+ */
+export function validateRequiredFields(fields: {
+  street?: string;
+  number?: string;
+  neighborhood?: string;
+  city?: string;
+}): boolean {
+  return !!(
+    fields.street?.trim() &&
+    fields.number?.trim() &&
+    fields.neighborhood?.trim() &&
+    fields.city?.trim()
+  );
 }
