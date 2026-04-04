@@ -8,6 +8,7 @@ import { CartProvider } from "@/modules/checkout/context/CartContext";
 import { CheckoutFlyout } from "@/modules/checkout/components/CheckoutFlyout";
 import { WishlistProvider } from "@/context/WishlistContext";
 import { AuthProvider } from "@/context/AuthContext";
+import { QueryProvider } from "@/lib/react-query/QueryProvider";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
@@ -45,19 +46,21 @@ export default function RootLayout({
           }}
         />
         <AuthProvider>
-          <WishlistProvider>
-            <CartProvider>
-              <GoogleAnalytics />
-              <Navbar />
-              <CheckoutFlyout />
-              <main className="min-h-screen">
-                {children}
-              </main>
-              <Footer />
-              <Toaster />
-              <Sonner />
-            </CartProvider>
-          </WishlistProvider>
+          <QueryProvider>
+            <WishlistProvider>
+              <CartProvider>
+                <GoogleAnalytics />
+                <Navbar />
+                <CheckoutFlyout />
+                <main className="min-h-screen">
+                  {children}
+                </main>
+                <Footer />
+                <Toaster />
+                <Sonner />
+              </CartProvider>
+            </WishlistProvider>
+          </QueryProvider>
         </AuthProvider>
       </body>
     </html>
