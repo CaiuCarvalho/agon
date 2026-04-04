@@ -17,7 +17,7 @@ This implementation plan breaks down the User Profile Page feature into discrete
   - **Property 9: RLS Policy Enforcement**
   - **Validates: Requirements 8.5, 8.6, 8.7, 8.8**
 
-- [-] 2. Create validation utility functions
+- [x] 2. Create validation utility functions
   - [x] 2.1 Implement phone validation function
     - Write `validatePhone()` function accepting 10-11 digit Brazilian format
     - Support formats: (XX) XXXXX-XXXX and (XX) XXXX-XXXX

@@ -149,13 +149,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, router, loadUserProfile]);
 
   const logout = useCallback(async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) {
+        console.error("Logout error:", error);
+        throw error;
+      }
 
-    setSession(null);
-    setUser(null);
-    router.refresh();
-    router.push("/login");
+      setSession(null);
+      setUser(null);
+      router.push("/login");
+      router.refresh();
+    } catch (error) {
+      console.error("Failed to logout:", error);
+      // Force logout even if API call fails
+      setSession(null);
+      setUser(null);
+      router.push("/login");
+      router.refresh();
+    }
   }, [supabase, router]);
 
   const updateUser = useCallback(async (newData: Partial<UserAuth>) => {

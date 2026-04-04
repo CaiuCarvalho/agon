@@ -9,6 +9,7 @@ import { useWishlist } from "@/context/WishlistContext";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Logo } from "./ui/Logo";
+import { toast } from "sonner";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -31,6 +32,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { totalFavorites } = useWishlist();
   
   const isAuthPage = pathname?.includes("/login") || pathname?.includes("/cadastro");
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      onClose();
+      toast.success("Você saiu da sua conta");
+    } catch (error) {
+      toast.error("Erro ao sair da conta");
+      console.error(error);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -86,7 +98,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       <Link href="/perfil" onClick={onClose} className="text-[10px] uppercase font-bold text-primary hover:underline transition-all">
                         Minha Conta
                       </Link>
-                      <button onClick={logout} className="text-[10px] uppercase font-bold text-muted-foreground hover:text-white transition-colors">
+                      <button onClick={handleLogout} className="text-[10px] uppercase font-bold text-muted-foreground hover:text-white transition-colors">
                         Sair
                       </button>
                     </div>

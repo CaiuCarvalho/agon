@@ -9,7 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { AvatarSelector } from "@/components/profile/AvatarSelector";
 import { validatePhone, validateCPF, maskPhone, maskCPF } from "@/utils/validation";
 import { toast } from "sonner";
-import { Pencil, Save, X, User } from "lucide-react";
+import { Pencil, Save, X, User, LogOut } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
 import type { UserAuth } from "@/context/AuthContext";
 
 interface ProfileEditorProps {
@@ -18,6 +19,7 @@ interface ProfileEditorProps {
 }
 
 export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
+  const { logout } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
   const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -133,6 +135,17 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
     });
     setErrors({ name: "", phone: "", taxId: "" });
     setIsEditing(false);
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast.success("Você saiu da sua conta");
+    } catch (error) {
+      toast.error("Erro ao sair da conta");
+      console.error(error);
+    }
   };
 
   return (
@@ -285,6 +298,20 @@ export function ProfileEditor({ user, onUpdate }: ProfileEditorProps) {
               >
                 <X className="h-3 w-3 mr-2" />
                 Cancelar
+              </Button>
+            </div>
+          )}
+
+          {/* Logout Button */}
+          {!isEditing && (
+            <div className="pt-4 border-t border-border/40">
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+                className="w-full uppercase font-bold tracking-widest text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-3 w-3 mr-2" />
+                Sair da Conta
               </Button>
             </div>
           )}

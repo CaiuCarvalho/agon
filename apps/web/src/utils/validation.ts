@@ -2,6 +2,7 @@
  * Valida um CPF (Cadastro de Pessoa Física) brasileiro.
  */
 export function validateCPF(cpf: string): boolean {
+  if (!cpf) return false;
   const cleanCPF = cpf.replace(/\D/g, "");
   if (cleanCPF.length !== 11 || /^(\d)\1{10}$/.test(cleanCPF)) return false;
   const digits = cleanCPF.split("").map(Number);
@@ -56,6 +57,7 @@ export function maskCEP(value: string) {
  * Aceita formatos: (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
  */
 export function validatePhone(phone: string): boolean {
+  if (!phone) return false;
   const cleanPhone = phone.replace(/\D/g, "");
   return cleanPhone.length >= 10 && cleanPhone.length <= 11;
 }
@@ -76,6 +78,7 @@ export function maskPhone(value: string) {
  * Aceita apenas strings com exatamente 8 dígitos.
  */
 export function validateZipCode(zipCode: string): boolean {
+  if (!zipCode) return false;
   const cleanZipCode = zipCode.replace(/\D/g, "");
   return cleanZipCode.length === 8;
 }
@@ -85,6 +88,7 @@ export function validateZipCode(zipCode: string): boolean {
  * Aceita apenas strings com exatamente 2 caracteres.
  */
 export function validateState(state: string): boolean {
+  if (!state) return false;
   return state.length === 2;
 }
 
