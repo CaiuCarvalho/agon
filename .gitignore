@@ -39,3 +39,6 @@ Thumbs.db
 # Agon Specific
 scripts/audit-results.json
 scripts/audit-report.md
+
+# TypeScript
+*.tsbuildinfo

@@ -95,6 +95,16 @@ O resultado da auditoria deve sempre seguir este template:
 
 ---
 
+## 6. REGRA FINAL
+
+Se houver inconsistência entre o **Código** e a **Referência**:
+- **Opção A**: Corrigir o código para espelhar a referência (Padrão).
+- **Opção B**: Se a mudança no código for intencional e melhor, a documentação de **Referência/Decisões** deve ser atualizada antes da aprovação.
+
+**NUNCA** ignore uma divergência. Se a regra mudou, a documentação deve mudar.
+
+---
+
 ## 7. 🔒 SEGURANÇA & SIGILO
 
 O projeto Agon impõe um **Gate de Segurança Absoluto** contra o vazamento de segredos.
@@ -119,11 +129,12 @@ Para garantir a segurança, qualquer agente deve:
 
 ---
 
-## 8. REGRA FINAL
+## 8. AUDITORIA AUTOMATIZADA
 
-Se houver inconsistência entre o **Código** e a **Referência**:
-- **Opção A**: Corrigir o código para espelhar a referência (Padrão).
-- **Opção B**: Se a mudança no código for intencional e melhor, a documentação de **Referência/Decisões** deve ser atualizada antes da aprovação.
-
-**NUNCA** ignore uma divergência. Se a regra mudou, a documentação deve mudar.
+O projeto utiliza scripts automatizados (`npm run audit`) que verificam:
+- Mapeamento módulo ↔ spec
+- Presença e uso de contratos Zod
+- Detecção de segredos (Secret Scanning)
+- Anti-patterns (`any`)
+- Score de qualidade (threshold: 80/100)
 

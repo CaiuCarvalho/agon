@@ -29,29 +29,20 @@ jobs:
       - name: Run SDD Audit
         id: sdd_audit
         run: npm run audit
-        continue-on-error: true
 
       - name: Post PR Comment
-        if: github.event_name == 'pull_request'
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const report = fs.readFileSync('scripts/audit-report.md', 'utf8');
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: report
-            })
-
-      - name: Final Check (Audit Gate)
-        run: |
-          if [ -f "scripts/audit-results.json" ]; then
-             # O script sdd-score já faz exit 1 se falhar, 
-             # mas garantimos aqui a integridade do CI.
-             npm run audit
-          else
-             echo "Audit results not found."
-             exit 1
-          fi
+            const reportPath = 'scripts/audit-report.md';
+            if (fs.existsSync(reportPath)) {
+              const report = fs.readFileSync(reportPath, 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: report
+              });
+            }

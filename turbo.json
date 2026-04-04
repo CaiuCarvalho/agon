@@ -9,7 +9,8 @@
                 "^build"
             ],
             "outputs": [
-                "dist/**"
+                "dist/**",
+                ".next/**"
             ]
         },
         "lint": {}

@@ -2,15 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "rootDir": "./src",
-    "outDir": "dist",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "ignoreDeprecations": "6.0",
-    "module": "Node16",
-    "moduleResolution": "node16"
+    "outDir": "./dist",
+    "module": "CommonJS",
+    "moduleResolution": "node"
   },
-  "include": [
-    "src"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
 }
