@@ -77,11 +77,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   <Avatar className="h-12 w-12 border border-border/20 shadow-sm">
                     <AvatarImage src={user?.avatarUrl} />
                     <AvatarFallback className="text-xl font-black bg-primary text-primary-foreground">
-                      {user?.name?.[0].toUpperCase()}
+                      {(user?.name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="text-sm font-bold truncate">Olá, {user?.name?.split(' ')[0]}</p>
+                    <p className="text-sm font-bold truncate">Olá, {user?.name?.split(' ')[0] || user?.email?.split('@')[0]}</p>
                     <div className="flex gap-2">
                       <Link href="/perfil" onClick={onClose} className="text-[10px] uppercase font-bold text-primary hover:underline transition-all">
                         Minha Conta

@@ -147,12 +147,12 @@ const Navbar = () => {
                   {isAuthenticated ? (
                     <Link href="/perfil" className="hidden lg:flex items-center gap-3 text-foreground hover:text-primary transition-colors group">
                       <span className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground group-hover:text-primary">
-                        Olá, {user?.name?.split(' ')[0]}
+                        Olá, {user?.name?.split(' ')[0] || user?.email?.split('@')[0]}
                       </span>
                       <Avatar className="h-8 w-8 border border-border/20 group-hover:border-primary/50 transition-all shadow-sm">
                         <AvatarImage src={user?.avatarUrl} />
                         <AvatarFallback className="text-[10px] font-black bg-muted">
-                          {user?.name?.[0].toUpperCase()}
+                          {(user?.name?.[0] || user?.email?.[0] || 'U').toUpperCase()}
                         </AvatarFallback>
                       </Avatar>
                     </Link>
