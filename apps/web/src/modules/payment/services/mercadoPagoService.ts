@@ -29,7 +29,7 @@ function getMercadoPagoClient(): MercadoPagoConfig {
     
     mercadoPagoClient = new MercadoPagoConfig({
       accessToken,
-      options: { timeout: 15000 }, // Increased timeout for production stability
+      options: { timeout: 30000 }, // Increased timeout for production stability (30s)
     });
   }
   
@@ -38,7 +38,7 @@ function getMercadoPagoClient(): MercadoPagoConfig {
 
 export const mercadoPagoService = {
   /**
-   * Create payment preference
+   * Create payment preference with retry logic
    */
   async createPreference(request: PreferenceRequest): Promise<PreferenceResponse> {
     const client = getMercadoPagoClient();
@@ -53,9 +53,8 @@ export const mercadoPagoService = {
       
       const preference = new Preference(client);
       
-      const response = await preference.create({
-        body: request,
-      });
+      // Attempt to create preference with retry logic
+      const response = await this._createPreferenceWithRetry(preference, request);
       
       console.log('Mercado Pago SDK: Preference created:', {
         id: response.id,
@@ -73,10 +72,58 @@ export const mercadoPagoService = {
       console.error('Mercado Pago SDK error:', {
         message: error.message,
         status: error.status,
+        code: error.code,
         cause: error.cause,
-        response: error.response,
+        response: error.response?.data,
       });
-      throw new Error(`Failed to create payment preference: ${error.message}`);
+      
+      // Enhance error message with more details
+      const errorDetails = [];
+      if (error.status) errorDetails.push(`status: ${error.status}`);
+      if (error.code) errorDetails.push(`code: ${error.code}`);
+      if (error.response?.data?.message) errorDetails.push(`message: ${error.response.data.message}`);
+      
+      const detailsStr = errorDetails.length > 0 ? ` (${errorDetails.join(', ')})` : '';
+      throw new Error(`Failed to create payment preference: ${error.message}${detailsStr}`);
+    }
+  },
+  
+  /**
+   * Internal: Create preference with retry logic for transient failures
+   */
+  async _createPreferenceWithRetry(preference: any, request: PreferenceRequest, attempt: number = 1): Promise<any> {
+    const maxAttempts = 2;
+    const retryDelay = 2000; // 2 seconds
+    
+    try {
+      return await preference.create({ body: request });
+    } catch (error: any) {
+      // Check if error is retryable (timeout or network error)
+      const isRetryable = 
+        error.code === 'ETIMEDOUT' ||
+        error.code === 'ESOCKETTIMEDOUT' ||
+        error.code === 'ECONNREFUSED' ||
+        error.code === 'ECONNRESET' ||
+        error.code === 'ENETUNREACH' ||
+        error.message?.toLowerCase().includes('timeout') ||
+        error.message?.toLowerCase().includes('network');
+      
+      // Retry if this is a retryable error and we haven't exceeded max attempts
+      if (isRetryable && attempt < maxAttempts) {
+        console.warn(`Mercado Pago request failed (attempt ${attempt}/${maxAttempts}), retrying in ${retryDelay}ms...`, {
+          error: error.message,
+          code: error.code,
+        });
+        
+        // Wait before retrying
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        
+        // Retry with incremented attempt counter
+        return this._createPreferenceWithRetry(preference, request, attempt + 1);
+      }
+      
+      // Not retryable or max attempts exceeded - throw error
+      throw error;
     }
   },
   

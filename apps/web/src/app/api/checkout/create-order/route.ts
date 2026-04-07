@@ -127,17 +127,21 @@ export async function POST(request: NextRequest) {
     // 6. Create Mercado Pago preference
     let preference;
     try {
+      const startTime = Date.now();
       console.log('Creating Mercado Pago preference...', {
         orderId: orderResult.order_id,
         itemCount: orderItems.length,
         totalAmount: orderResult.total_amount,
+        timestamp: new Date().toISOString(),
       });
       
       preference = await mercadoPagoService.createPreference(preferenceRequest);
       
+      const duration = Date.now() - startTime;
       console.log('Preference created successfully:', {
         preferenceId: preference.id,
         initPoint: preference.init_point,
+        duration: `${duration}ms`,
       });
     } catch (mpError: any) {
       console.error('Mercado Pago error:', mpError);
@@ -145,6 +149,9 @@ export async function POST(request: NextRequest) {
         message: mpError.message,
         stack: mpError.stack,
         cause: mpError.cause,
+        code: mpError.code,
+        status: mpError.status,
+        errno: mpError.errno,
       });
       
       // Rollback: delete order and payment
@@ -152,9 +159,48 @@ export async function POST(request: NextRequest) {
       await supabase.from('order_items').delete().eq('order_id', orderResult.order_id);
       await supabase.from('orders').delete().eq('id', orderResult.order_id);
       
+      // Determine appropriate error status based on error type
+      let errorStatus = 500;
+      let errorMessage = 'Erro ao criar preferência de pagamento';
+      
+      // Check for timeout errors
+      if (
+        mpError.code === 'ETIMEDOUT' ||
+        mpError.code === 'ESOCKETTIMEDOUT' ||
+        mpError.message?.toLowerCase().includes('timeout') ||
+        mpError.message?.toLowerCase().includes('timed out')
+      ) {
+        errorStatus = 504; // Gateway Timeout
+        errorMessage = 'Timeout ao conectar com o serviço de pagamento. Por favor, tente novamente.';
+        console.error('Timeout error detected - returning 504');
+      }
+      // Check for network errors
+      else if (
+        mpError.code === 'ECONNREFUSED' ||
+        mpError.code === 'ENOTFOUND' ||
+        mpError.code === 'ECONNRESET' ||
+        mpError.code === 'ENETUNREACH' ||
+        mpError.message?.toLowerCase().includes('network') ||
+        mpError.message?.toLowerCase().includes('connect')
+      ) {
+        errorStatus = 503; // Service Unavailable
+        errorMessage = 'Serviço de pagamento temporariamente indisponível. Por favor, tente novamente em alguns instantes.';
+        console.error('Network error detected - returning 503');
+      }
+      // Check for API errors with status codes
+      else if (mpError.status) {
+        errorStatus = mpError.status >= 500 ? 500 : mpError.status;
+        errorMessage = `Erro no serviço de pagamento: ${mpError.message}`;
+        console.error(`API error with status ${mpError.status} - returning ${errorStatus}`);
+      }
+      
       return NextResponse.json(
-        { success: false, error: `Erro ao criar preferência de pagamento: ${mpError.message}` },
-        { status: 500 }
+        { 
+          success: false, 
+          error: errorMessage,
+          details: mpError.message,
+        },
+        { status: errorStatus }
       );
     }
     
