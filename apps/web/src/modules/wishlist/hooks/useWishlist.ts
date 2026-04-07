@@ -127,7 +127,11 @@ export function useWishlist() {
         if (status === 'SUBSCRIBED') {
           // Realtime subscription established
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.error('[Wishlist] Realtime subscription error:', status);
+          // Silently handle reconnection - Supabase will retry automatically
+          // Only log in development
+          if (process.env.NODE_ENV === 'development') {
+            console.warn('[Wishlist] Realtime reconnecting...');
+          }
         }
       });
     

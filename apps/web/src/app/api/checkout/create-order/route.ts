@@ -14,6 +14,23 @@ import type { CreateOrderWithPaymentResponse } from '@/modules/payment/types';
 
 export async function POST(request: NextRequest) {
   try {
+    // Environment validation (helps debug 502 errors in production)
+    if (!process.env.MERCADOPAGO_ACCESS_TOKEN) {
+      console.error('[CRITICAL] MERCADOPAGO_ACCESS_TOKEN not configured');
+      return NextResponse.json(
+        { success: false, error: 'Configuração de pagamento ausente' },
+        { status: 500 }
+      );
+    }
+    
+    if (!process.env.NEXT_PUBLIC_APP_URL) {
+      console.error('[CRITICAL] NEXT_PUBLIC_APP_URL not configured');
+      return NextResponse.json(
+        { success: false, error: 'Configuração de URL ausente' },
+        { status: 500 }
+      );
+    }
+    
     // 1. Authenticate user
     const supabase = await createClient();
     const { data: { user }, error: authError } = await supabase.auth.getUser();

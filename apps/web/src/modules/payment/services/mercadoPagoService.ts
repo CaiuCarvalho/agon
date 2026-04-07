@@ -29,7 +29,7 @@ function getMercadoPagoClient(): MercadoPagoConfig {
     
     mercadoPagoClient = new MercadoPagoConfig({
       accessToken,
-      options: { timeout: 5000 },
+      options: { timeout: 15000 }, // Increased timeout for production stability
     });
   }
   
