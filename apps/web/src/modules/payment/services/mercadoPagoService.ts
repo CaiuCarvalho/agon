@@ -29,7 +29,9 @@ function getMercadoPagoClient(): MercadoPagoConfig {
     
     mercadoPagoClient = new MercadoPagoConfig({
       accessToken,
-      options: { timeout: 30000 }, // Increased timeout for production stability (30s)
+      options: { 
+        timeout: 25000, // 25s timeout - provides 35s margin before Next.js 60s limit to handle retries and error processing
+      },
     });
   }
   
@@ -84,7 +86,14 @@ export const mercadoPagoService = {
       if (error.response?.data?.message) errorDetails.push(`message: ${error.response.data.message}`);
       
       const detailsStr = errorDetails.length > 0 ? ` (${errorDetails.join(', ')})` : '';
-      throw new Error(`Failed to create payment preference: ${error.message}${detailsStr}`);
+      const enhancedError = new Error(`Failed to create payment preference: ${error.message}${detailsStr}`);
+      
+      // Preserve error code for timeout detection in route handler
+      if (error.code) {
+        (enhancedError as any).code = error.code;
+      }
+      
+      throw enhancedError;
     }
   },
   

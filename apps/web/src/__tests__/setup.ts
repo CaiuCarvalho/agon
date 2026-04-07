@@ -5,6 +5,11 @@
 
 import fs from 'fs';
 import path from 'path';
+import { test } from 'vitest';
+import { fc } from '@fast-check/vitest';
+
+// Configure fast-check for vitest
+test.prop = fc.test;
 
 // Load .env.local
 const envPath = path.resolve(__dirname, '../../.env.local');

@@ -39,6 +39,7 @@
         "zod": "^3.25.76"
     },
     "devDependencies": {
+        "@fast-check/vitest": "^0.4.0",
         "@types/node": "20.12.7",
         "@types/react": "^18.2.0",
         "@types/react-dom": "^18.2.0",

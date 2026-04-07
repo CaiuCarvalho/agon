@@ -20,35 +20,47 @@ export function useCheckout() {
 
   const createOrderMutation = useMutation({
     mutationFn: async (request: CreateOrderRequest) => {
-      const response = await fetch('/api/checkout/create-order', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(request),
-      });
-      
-      // Check if response is JSON
-      const contentType = response.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        // Response is not JSON (probably HTML error page)
-        const text = await response.text();
-        console.error('API returned non-JSON response:', {
-          status: response.status,
-          statusText: response.statusText,
-          contentType,
-          body: text.substring(0, 500), // Log first 500 chars
+      // Create AbortController with 60-second timeout to prevent indefinite hangs
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 60000);
+
+      try {
+        const response = await fetch('/api/checkout/create-order', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(request),
+          signal: controller.signal,
         });
-        throw new Error(`Erro no servidor (${response.status}). Verifique os logs do servidor.`);
+        
+        clearTimeout(timeoutId);
+        
+        // Check if response is JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          // Response is not JSON (probably HTML error page)
+          const text = await response.text();
+          console.error('API returned non-JSON response:', {
+            status: response.status,
+            statusText: response.statusText,
+            contentType,
+            body: text.substring(0, 500), // Log first 500 chars
+          });
+          throw new Error(`Erro no servidor (${response.status}). Verifique os logs do servidor.`);
+        }
+        
+        const data: CreateOrderWithPaymentResponse = await response.json();
+        
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || 'Erro ao criar pedido');
+        }
+        
+        return data;
+      } catch (error) {
+        clearTimeout(timeoutId);
+        throw error;
       }
-      
-      const data: CreateOrderWithPaymentResponse = await response.json();
-      
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Erro ao criar pedido');
-      }
-      
-      return data;
     },
     
     onSuccess: (data) => {
@@ -71,6 +83,22 @@ export function useCheckout() {
     onError: (error: Error) => {
       // Parse error message for specific cases
       const message = error.message.toLowerCase();
+      
+      // Check if error is due to abort/timeout (Requirement 2.4)
+      // AbortError occurs when request exceeds 60-second timeout
+      if (error.name === 'AbortError' || message.includes('abort') || message.includes('timeout')) {
+        toast.error('Tempo limite excedido', {
+          description: 'A requisição demorou muito tempo. Por favor, tente novamente.',
+          action: {
+            label: 'Tentar novamente',
+            onClick: () => {
+              // User can retry by submitting the form again
+              toast.info('Clique em "Finalizar Pedido" para tentar novamente');
+            },
+          },
+        });
+        return;
+      }
       
       if (message.includes('carrinho vazio') || message.includes('empty cart')) {
         toast.error('Carrinho vazio', {

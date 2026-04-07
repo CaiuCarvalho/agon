@@ -1,0 +1,147 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration tests (BEFORE implementing fix)
+  - **Property 1: Bug Condition** - Checkout 502 Error Conditions
+  - **CRITICAL**: These tests MUST FAIL on unfixed code - failure confirms the bugs exist
+  - **DO NOT attempt to fix the tests or the code when they fail**
+  - **NOTE**: These tests encode the expected behavior - they will validate the fix when they pass after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the 5 bug conditions exist
+  - **Scoped PBT Approach**: For deterministic bugs, scope properties to concrete failing cases to ensure reproducibility
+  - Test implementation details from Bug Condition in design:
+    - **Condition 1**: Missing NEXT_PUBLIC_APP_URL causes 500 error that manifests as 502
+    - **Condition 2**: Missing MERCADOPAGO_ACCESS_TOKEN prevents payment preference creation
+    - **Condition 3**: Mercado Pago SDK timeout (30s) exceeds Next.js limits causing 502
+    - **Condition 4**: Client fetch has no timeout, allowing indefinite hangs
+    - **Condition 5**: .env.production file missing required variables template
+  - The test assertions should match the Expected Behavior Properties from design
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests FAIL (this is correct - it proves the bugs exist)
+  - Document counterexamples found to understand root causes
+  - Mark task complete when tests are written, run, and failures are documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Existing Checkout Functionality
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs (all env vars configured, timeouts within limits)
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements:
+    - Valid checkout with all variables configured processes normally
+    - Validation errors (empty cart, invalid data) return 400
+    - Authentication errors return 401
+    - Rollback works when Mercado Pago fails
+    - Webhook processing continues working
+    - Cart invalidation after success continues working
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 3. Fix for Checkout 502 Error
+
+  - [x] 3.1 Improve environment variable validation in route.ts
+    - Keep existing validation at lines 24-38
+    - Add detailed logging for production diagnosis
+    - Ensure 500 errors don't manifest as 502 to users
+    - Add timestamp to each log entry
+    - _Bug_Condition: (env.NEXT_PUBLIC_APP_URL = null OR env.NEXT_PUBLIC_APP_URL = "") OR (env.MERCADOPAGO_ACCESS_TOKEN = null OR env.MERCADOPAGO_ACCESS_TOKEN = "")_
+    - _Expected_Behavior: Return 500 with clear error message, not 502_
+    - _Preservation: Existing validation logic for other errors (400, 401) unchanged_
+    - _Requirements: 1.1, 2.1_
+
+  - [x] 3.2 Adjust Mercado Pago SDK timeout in mercadoPagoService.ts
+    - Reduce timeout from 30s to 25s (line 31)
+    - Add comment explaining choice (margin before Next.js 60s limit)
+    - Ensure retry logic still works with new timeout
+    - _Bug_Condition: mercadoPagoResponseTime > 30000 AND nextJsTimeout <= 60000_
+    - _Expected_Behavior: Timeout before Next.js limit, return 504 not 502_
+    - _Preservation: Existing retry logic and error handling unchanged_
+    - _Requirements: 1.3, 2.3_
+
+  - [x] 3.3 Improve timeout error handling in route.ts
+    - Expand catch block at lines 139-157
+    - Add specific check for SDK timeout errors
+    - Return 504 (Gateway Timeout) instead of 502
+    - Ensure rollback executes before returning error
+    - Add duration logging for each operation
+    - _Bug_Condition: Timeout errors from Mercado Pago SDK_
+    - _Expected_Behavior: Return 504 with clear message, execute rollback_
+    - _Preservation: Existing rollback logic and other error handling unchanged_
+    - _Requirements: 1.3, 2.3_
+
+  - [x] 3.4 Add timeout to client fetch in useCheckout.ts
+    - Create AbortController before fetch (line 18)
+    - Configure 60-second timeout
+    - Abort request if timeout exceeded
+    - Handle abort error in catch block
+    - _Bug_Condition: clientFetchTimeout = null_
+    - _Expected_Behavior: Abort after 60s with clear error message_
+    - _Preservation: Existing error handling and navigation logic unchanged_
+    - _Requirements: 1.4, 2.4_
+
+  - [x] 3.5 Improve timeout error handling in useCheckout.ts
+    - Add specific case for timeout/abort in onError (lines 51-73)
+    - Detect abort signal errors
+    - Show clear message to user
+    - Suggest retry action
+    - _Bug_Condition: Request timeout or abort_
+    - _Expected_Behavior: Clear user feedback with retry suggestion_
+    - _Preservation: Existing error messages for other cases unchanged_
+    - _Requirements: 2.4_
+
+  - [x] 3.6 Add environment variables template to .env.production
+    - Add NEXT_PUBLIC_APP_URL with example value
+    - Add MERCADOPAGO_ACCESS_TOKEN with format explanation
+    - Add MERCADOPAGO_WEBHOOK_SECRET for future webhooks
+    - Add comments explaining where to obtain each value
+    - Add Mercado Pago configuration section with documentation link
+    - Explain difference between sandbox and production
+    - _Bug_Condition: .env.production missing required variables_
+    - _Expected_Behavior: Clear template with all required variables and instructions_
+    - _Preservation: Existing variables in file unchanged_
+    - _Requirements: 1.5, 2.5_
+
+  - [x] 3.7 Add timeout configuration documentation to next.config.js
+    - Document Next.js default timeout (60s) in comments
+    - Explain relationship with Mercado Pago SDK timeout
+    - Add reference to route.ts timeout handling
+    - _Bug_Condition: Lack of timeout documentation_
+    - _Expected_Behavior: Clear documentation of timeout configuration_
+    - _Preservation: Existing Next.js configuration unchanged_
+    - _Requirements: 2.3_
+
+  - [x] 3.8 Verify bug condition exploration tests now pass
+    - **Property 1: Expected Behavior** - Checkout 502 Error Fixed
+    - **IMPORTANT**: Re-run the SAME tests from task 1 - do NOT write new tests
+    - The tests from task 1 encode the expected behavior
+    - When these tests pass, it confirms the expected behavior is satisfied
+    - Run bug condition exploration tests from step 1
+    - **EXPECTED OUTCOME**: Tests PASS (confirms bugs are fixed)
+    - Verify all 5 conditions are resolved:
+      - Missing NEXT_PUBLIC_APP_URL returns clear error (not 502)
+      - Missing MERCADOPAGO_ACCESS_TOKEN returns clear error (not 502)
+      - Mercado Pago timeout returns 504 (not 502)
+      - Client fetch has 60s timeout (not indefinite hang)
+      - .env.production has complete template
+    - _Requirements: Expected Behavior Properties from design (2.1, 2.2, 2.3, 2.4, 2.5)_
+
+  - [x] 3.9 Verify preservation tests still pass
+    - **Property 2: Preservation** - Existing Checkout Functionality Preserved
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all existing behaviors preserved:
+      - Valid checkout with all variables configured works
+      - Validation errors return 400
+      - Authentication errors return 401
+      - Rollback works when Mercado Pago fails
+      - Webhook processing works
+      - Cart invalidation after success works
+    - _Requirements: Preservation Requirements from design (3.1, 3.2, 3.3, 3.4, 3.5)_
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run all bug condition tests - should PASS
+  - Run all preservation tests - should PASS
+  - Run existing unit tests - should PASS
+  - Verify no regressions in other checkout flows
+  - Ask user if questions arise or manual testing is needed
