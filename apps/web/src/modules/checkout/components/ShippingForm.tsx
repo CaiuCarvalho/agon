@@ -52,7 +52,7 @@ export function ShippingForm({ defaultEmail, onSubmit, isLoading, submitRef }: S
       if (addressData) {
         if (addressData.street) setValue('shippingAddress', addressData.street);
         if (addressData.city) setValue('shippingCity', addressData.city);
-        if (addressData.state) setValue('shippingState', addressData.state);
+        if (addressData.state) setValue('shippingState', addressData.state as any);
       }
       
       setIsLoadingCEP(false);

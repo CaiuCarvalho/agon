@@ -127,9 +127,9 @@ export default function WishlistPage() {
 
               {/* Product Info */}
               <div className="flex flex-col gap-1">
-                {item.product?.category && (
+                {item.product?.categoryId && (
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary mb-1">
-                    {item.product.category}
+                    {item.product.categoryId}
                   </p>
                 )}
 

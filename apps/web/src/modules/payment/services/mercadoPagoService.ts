@@ -158,9 +158,12 @@ export const mercadoPagoService = {
         .digest('hex');
       
       // Compare hashes (constant-time comparison)
+      const receivedBuffer = Buffer.from(receivedHash, 'hex');
+      const computedBuffer = Buffer.from(computedHash, 'hex');
+      
       return crypto.timingSafeEqual(
-        Buffer.from(receivedHash, 'hex'),
-        Buffer.from(computedHash, 'hex')
+        new Uint8Array(receivedBuffer),
+        new Uint8Array(computedBuffer)
       );
     } catch (error) {
       console.error('Signature validation error:', error);
@@ -192,7 +195,8 @@ export const mercadoPagoService = {
     const phoneNumber = phoneMatch ? `${phoneMatch[2]}${phoneMatch[3]}` : '';
     
     return {
-      items: items.map((item) => ({
+      items: items.map((item, index) => ({
+        id: `item-${index + 1}`,
         title: item.productName,
         quantity: item.quantity,
         unit_price: item.productPrice,

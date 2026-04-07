@@ -39,6 +39,7 @@ export interface Order {
 // Mercado Pago preference request
 export interface PreferenceRequest {
   items: Array<{
+    id: string;
     title: string;
     quantity: number;
     unit_price: number;
@@ -57,7 +58,7 @@ export interface PreferenceRequest {
     failure: string;
     pending: string;
   };
-  auto_return: 'approved' | 'all';
+  auto_return?: 'approved' | 'all';
   external_reference: string;
   notification_url: string;
   statement_descriptor: string;

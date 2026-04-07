@@ -31,8 +31,7 @@ export default function Home() {
   // Buscar produtos reais do banco
   const { data: productsData, isLoading: isLoadingProducts } = useProducts({ 
     limit: 4,
-    sortBy: 'created_at',
-    sortOrder: 'desc'
+    sortBy: 'latest'
   });
 
   return (
