@@ -5,7 +5,7 @@ import { OrderConfirmationClient } from '@/modules/payment/components/OrderConfi
 export default async function OrderConfirmationPage({
   searchParams,
 }: {
-  searchParams: { order_id?: string };
+  searchParams: Promise<{ order_id?: string }>;
 }) {
   const supabase = await createClient();
   
@@ -16,7 +16,8 @@ export default async function OrderConfirmationPage({
     redirect('/login');
   }
   
-  const orderId = searchParams.order_id;
+  const params = await searchParams;
+  const orderId = params.order_id;
   
   if (!orderId) {
     redirect('/');

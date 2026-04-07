@@ -4,9 +4,10 @@ import { redirect } from 'next/navigation';
 export default async function PendingPaymentPage({
   searchParams,
 }: {
-  searchParams: { order_id?: string };
+  searchParams: Promise<{ order_id?: string }>;
 }) {
-  const orderId = searchParams.order_id;
+  const params = await searchParams;
+  const orderId = params.order_id;
   
   if (!orderId) {
     redirect('/');

@@ -21,7 +21,7 @@ export const api = {
     } else {
       try {
         const { cookies } = await import("next/headers");
-        const cookieStore = cookies();
+        const cookieStore = await cookies();
         token = cookieStore.get("vitta_token")?.value || null;
       } catch { }
     }
