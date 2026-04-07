@@ -4,11 +4,10 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
-import { CartProvider } from "@/modules/checkout/context/CartContext";
-import { CheckoutFlyout } from "@/modules/checkout/components/CheckoutFlyout";
-import { WishlistProvider } from "@/context/WishlistContext";
 import { AuthProvider } from "@/context/AuthContext";
 import { QueryProvider } from "@/lib/react-query/QueryProvider";
+import { MigrationProgress } from "@/components/cart/MigrationProgress";
+import { RealtimeStatus } from "@/components/cart/RealtimeStatus";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
@@ -47,19 +46,16 @@ export default function RootLayout({
         />
         <AuthProvider>
           <QueryProvider>
-            <WishlistProvider>
-              <CartProvider>
-                <GoogleAnalytics />
-                <Navbar />
-                <CheckoutFlyout />
-                <main className="min-h-screen">
-                  {children}
-                </main>
-                <Footer />
-                <Toaster />
-                <Sonner />
-              </CartProvider>
-            </WishlistProvider>
+            <GoogleAnalytics />
+            <MigrationProgress />
+            <RealtimeStatus />
+            <Navbar />
+            <main className="min-h-screen">
+              {children}
+            </main>
+            <Footer />
+            <Toaster />
+            <Sonner />
           </QueryProvider>
         </AuthProvider>
       </body>

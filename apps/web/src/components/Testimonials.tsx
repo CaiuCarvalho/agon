@@ -5,21 +5,21 @@ import { Star } from "lucide-react";
 
 const testimonials = [
   {
-    name: "Carlos Silva",
-    city: "São Paulo, SP",
-    text: "A camisa chegou em 3 dias e a qualidade é incrível! Material idêntico ao oficial. Vou comprar mais!",
+    name: "Rafael Gonçalves",
+    city: "Curitiba, PR",
+    text: "Recebi minha camisa da Seleção em 2 dias aqui em Curitiba! A qualidade do tecido é excepcional, parece até a oficial. Já comprei mais duas!",
     stars: 5,
   },
   {
-    name: "Ana Beatriz",
-    city: "Rio de Janeiro, RJ",
-    text: "Comprei o kit completo para a Copa e ficou perfeito. Melhor loja de artigos do Brasil que já encontrei.",
+    name: "Mariana Costa",
+    city: "Florianópolis, SC",
+    text: "Fiz meu pedido de Floripa e chegou super rápido. O kit completo ficou perfeito pro meu filho. Atendimento nota 10!",
     stars: 5,
   },
   {
-    name: "João Pedro",
-    city: "Belo Horizonte, MG",
-    text: "Preços justos e entrega super rápida. O boné é lindo e super confortável. Recomendo demais!",
+    name: "Lucas Ferreira",
+    city: "Porto Alegre, RS",
+    text: "Melhor loja de artigos esportivos que já comprei! O agasalho da Seleção é de altíssima qualidade. Entrega rápida aqui no Sul!",
     stars: 5,
   },
 ];

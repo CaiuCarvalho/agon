@@ -3,8 +3,8 @@ export const GA_TRACKING_ID = process.env.NEXT_PUBLIC_GA_ID;
 // Adiciona gtag ao objeto Window
 declare global {
   interface Window {
-    gtag: (...args: any[]) => void;
-    dataLayer: any[];
+    gtag: (command: string, ...args: unknown[]) => void;
+    dataLayer: Array<Record<string, unknown>>;
   }
 }
 

@@ -1,0 +1,142 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Type Safety Violations and Security Issues
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: For deterministic bugs, scope the property to the concrete failing case(s) to ensure reproducibility
+  - Test that audit detects exactly 20 issues (18 type safety + 2 security) on unfixed code
+  - Test that TypeScript compilation allows `any` types without strict mode errors
+  - Test that form fields typed as `any` do not provide autocomplete
+  - Test that order/address props typed as `any` do not provide type safety
+  - Test that security issues exist in documentation and scripts (fallback patterns)
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found:
+    - Audit score is 78/100 (not ≥95)
+    - 18 `any` occurrences in components
+    - 2 insecure fallback patterns in docs/scripts
+    - No autocomplete in form fields
+    - No type checking in order/address components
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Functional Behavior Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements
+  - Property-based testing generates many test cases for stronger guarantees
+  - Test that form submission works correctly (validation, error handling, success flow)
+  - Test that checkout calculations produce correct totals
+  - Test that order rendering displays all order data correctly
+  - Test that address management (CRUD operations) works correctly
+  - Test that analytics tracking sends events to Google Analytics
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 3. Fix for audit type safety and security issues
+
+  - [x] 3.1 Create centralized type structure
+    - Create `apps/web/src/types/order.ts` with Order, OrderItem, OrderStatus interfaces
+    - Create `apps/web/src/types/address.ts` with Address, AddressFormValues interfaces
+    - Create `apps/web/src/types/cart.ts` with CartItem interface
+    - Create `apps/web/src/types/form.ts` with ForgotPasswordFormValues, ResetPasswordFormValues interfaces
+    - _Bug_Condition: isBugCondition(input) where input.contains("any") AND input.isTypeAnnotation_
+    - _Expected_Behavior: All types are explicitly defined with proper TypeScript interfaces_
+    - _Preservation: No functional behavior changes, only type definitions added_
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [x] 3.2 Refactor form components
+    - Fix `apps/web/src/components/auth/ForgotPasswordForm.tsx` line 69: Replace `field: any` with `ControllerRenderProps<ForgotPasswordFormValues, "email">`
+    - Fix `apps/web/src/components/auth/ResetPasswordForm.tsx` line 80: Replace `error: any` with `error: unknown` + type narrowing
+    - Fix `apps/web/src/components/auth/ResetPasswordForm.tsx` lines 119, 144, 168: Replace `field: any` with proper ControllerRenderProps types
+    - Import necessary types from react-hook-form and @/types/form
+    - _Bug_Condition: Form fields typed as `any` lose type safety_
+    - _Expected_Behavior: Form fields use ControllerRenderProps with explicit form value types_
+    - _Preservation: Forms continue to validate, submit, and handle errors correctly_
+    - _Requirements: 2.1, 3.1_
+
+  - [x] 3.3 Refactor checkout components
+    - Fix `apps/web/src/components/checkout/OrderSummary.tsx` line 7: Replace `items: any[]` with `items: CartItem[]`
+    - Import CartItem type from @/types/cart
+    - _Bug_Condition: Cart items typed as `any[]` lose type safety_
+    - _Expected_Behavior: Cart items use explicit CartItem interface_
+    - _Preservation: Checkout calculations and rendering continue to work correctly_
+    - _Requirements: 2.2, 3.3_
+
+  - [x] 3.4 Refactor profile components (address)
+    - Fix `apps/web/src/components/profile/AddressForm.tsx` line 38: Replace `initialData?: any` with `initialData?: AddressFormValues`
+    - Fix `apps/web/src/components/profile/AddressManager.tsx` line 81: Remove `any` annotation (let TypeScript infer)
+    - Import Address and AddressFormValues types from @/types/address
+    - _Bug_Condition: Address data typed as `any` loses type safety_
+    - _Expected_Behavior: Address data uses explicit Address and AddressFormValues interfaces_
+    - _Preservation: Address CRUD operations continue to work correctly_
+    - _Requirements: 2.2, 3.2_
+
+  - [x] 3.5 Refactor profile components (orders)
+    - Fix `apps/web/src/components/profile/OrderCard.tsx` line 23: Replace `order: any` with `order: Order`
+    - Fix `apps/web/src/components/profile/OrderCard.tsx` line 26: Type statusConfig variant as union type
+    - Fix `apps/web/src/components/profile/OrderCard.tsx` line 147: Replace `item: any` with `item: OrderItem`
+    - Fix `apps/web/src/components/profile/OrderCard.tsx` line 208: Replace `props: any` with `props: React.SVGProps<SVGSVGElement>`
+    - Fix `apps/web/src/components/profile/OrderHistoryViewer.tsx` lines 49, 59: Remove `any` annotations (let TypeScript infer)
+    - Fix `apps/web/src/components/profile/OrderList.tsx` line 8: Replace `orders: any[]` with `orders: Order[]`
+    - Import Order and OrderItem types from @/types/order
+    - _Bug_Condition: Order data typed as `any` loses type safety_
+    - _Expected_Behavior: Order data uses explicit Order and OrderItem interfaces_
+    - _Preservation: Order rendering and display continue to work correctly_
+    - _Requirements: 2.2, 3.2_
+
+  - [x] 3.6 Refactor UI and infrastructure components
+    - Fix `apps/web/src/components/ui/Logo.tsx` line 19: Replace `motionProps: any` with proper type or `Record<string, unknown>`
+    - Fix `apps/web/src/lib/analytics.ts` lines 6-7: Replace `gtag: (...args: any[]) => void` with `gtag: (command: string, ...args: unknown[]) => void` and `dataLayer: any[]` with `dataLayer: Array<Record<string, unknown>>`
+    - _Bug_Condition: UI and analytics typed as `any` lose type safety_
+    - _Expected_Behavior: UI and analytics use appropriate TypeScript types_
+    - _Preservation: Logo rendering and analytics tracking continue to work correctly_
+    - _Requirements: 2.3, 3.4_
+
+  - [x] 3.7 Fix security issues in documentation and scripts
+    - Fix `reference/execution/sdd-audit.md` line 121: Replace insecure fallback example with secure patterns (fail-fast or safe default)
+    - Fix `scripts/sdd-audit-runner.ts` line 233: Update comment to reflect secure pattern (ignore URL fallbacks and boolean defaults)
+    - Add documentation showing correct patterns: fail-fast validation or safe non-sensitive defaults
+    - _Bug_Condition: Hardcoded fallbacks in env vars may expose sensitive values_
+    - _Expected_Behavior: Documentation shows secure patterns, scripts ignore safe fallbacks_
+    - _Preservation: Audit script continues to generate reports correctly_
+    - _Requirements: 2.4, 3.5_
+
+  - [x] 3.8 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Type Safety Enforcement and Security Compliance
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - Verify audit score is ≥95 (ideally 100)
+    - Verify TypeScript strict mode compilation passes with zero errors
+    - Verify autocomplete works in all refactored components
+    - Verify no insecure fallback patterns exist
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2, 2.3, 2.4_
+
+  - [x] 3.9 Verify preservation tests still pass
+    - **Property 2: Preservation** - Functional Behavior Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - Verify form submission still works correctly
+    - Verify checkout calculations still produce correct totals
+    - Verify order rendering still displays data correctly
+    - Verify address management still works correctly
+    - Verify analytics tracking still sends events
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+    - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run full test suite to ensure no regressions
+  - Run `npm run audit` to verify score ≥95
+  - Run `tsc --noEmit --strict` to verify zero type errors
+  - Verify all form, checkout, profile, and analytics functionality works correctly
+  - Ask the user if questions arise

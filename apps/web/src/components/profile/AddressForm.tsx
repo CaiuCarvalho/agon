@@ -17,6 +17,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Loader2, MapPin } from "lucide-react";
 import { toast } from "sonner";
+import { AddressFormValues as AddressFormValuesType } from "@/types/address";
 
 const addressSchema = z.object({
   zipCode: z.string().length(8, "CEP deve ter 8 dígitos"),
@@ -35,7 +36,7 @@ interface AddressFormProps {
   isOpen: boolean;
   onClose: () => void;
   onSave: (data: AddressFormValues) => Promise<void>;
-  initialData?: any;
+  initialData?: AddressFormValuesType;
   isLoading: boolean;
 }
 

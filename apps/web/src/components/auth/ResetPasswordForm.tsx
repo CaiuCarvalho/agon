@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, ShieldCheck, Lock, CheckCircle2 } from "lucide-react";
@@ -18,6 +18,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
+import { ResetPasswordFormValues } from "@/types/form";
 
 const resetPasswordSchema = z.object({
   code: z.string().length(6, "O código deve ter 6 dígitos."),
@@ -77,8 +78,9 @@ export function ResetPasswordForm({ email, onBack }: ResetPasswordFormProps) {
         toast.info("Acessando sua conta...");
       }, 1500);
 
-    } catch (error: any) {
-      toast.error(error.message || "Código inválido ou expirado.");
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Código inválido ou expirado.";
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -116,7 +118,7 @@ export function ResetPasswordForm({ email, onBack }: ResetPasswordFormProps) {
         <FormField
           control={form.control}
           name="code"
-          render={({ field }: { field: any }) => (
+          render={({ field }: { field: ControllerRenderProps<ResetPasswordValues, "code"> }) => (
             <FormItem>
               <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
                 Código de 6 Dígitos
@@ -141,7 +143,7 @@ export function ResetPasswordForm({ email, onBack }: ResetPasswordFormProps) {
         <FormField
           control={form.control}
           name="password"
-          render={({ field }: { field: any }) => (
+          render={({ field }: { field: ControllerRenderProps<ResetPasswordValues, "password"> }) => (
             <FormItem>
               <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
                 Nova Senha de Elite
@@ -165,7 +167,7 @@ export function ResetPasswordForm({ email, onBack }: ResetPasswordFormProps) {
         <FormField
           control={form.control}
           name="confirmPassword"
-          render={({ field }: { field: any }) => (
+          render={({ field }: { field: ControllerRenderProps<ResetPasswordValues, "confirmPassword"> }) => (
             <FormItem>
               <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
                 Confirmar Nova Senha

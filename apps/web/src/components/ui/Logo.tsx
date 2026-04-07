@@ -16,7 +16,7 @@ interface LogoProps {
  * Supports Shared Layout Animation ("Logo Flight") and standard opacity fade.
  */
 export const Logo = ({ className, isClickable = true, useSharedLayout = true }: LogoProps) => {
-  const motionProps: any = useSharedLayout
+  const motionProps: Record<string, unknown> = useSharedLayout
     ? {
       layoutId: "main-logo",
       layout: true,

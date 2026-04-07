@@ -4,8 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, User, ShoppingBag, Heart, LogOut, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
-import { useCart } from "@/modules/checkout/hooks/useCart";
-import { useWishlist } from "@/context/WishlistContext";
+import { useCart } from "@/modules/cart/hooks/useCart";
+import { useWishlist } from "@/modules/wishlist/hooks/useWishlist";
 import { usePathname } from "next/navigation";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Logo } from "./ui/Logo";
@@ -27,9 +27,9 @@ const menuItems = [
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
   const { user, isAuthenticated, logout } = useAuth();
-  const { cart } = useCart();
-  const totalItems = cart?.items.reduce((acc, i) => acc + i.quantity, 0) || 0;
-  const { totalFavorites } = useWishlist();
+  const { items, totalItems } = useCart();
+  const { items: wishlistItems } = useWishlist();
+  const totalFavorites = wishlistItems.length;
   
   const isAuthPage = pathname?.includes("/login") || pathname?.includes("/cadastro");
 

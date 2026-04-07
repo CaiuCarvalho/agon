@@ -1,10 +1,17 @@
 /**
  * Image Service Unit Tests
  * Tests for image validation, URL optimization, and helper functions
+ * 
+ * Validates Requirements:
+ * - 14.2: Image file validation (MIME type, size)
+ * - 13.4: Image URL validation
+ * 
+ * Uses Zod schema validation from contracts.ts
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { imageService } from './imageService';
+import { imageFileSchema } from '../contracts';
 
 describe('imageService', () => {
   describe('validateImageFile', () => {
@@ -12,6 +19,10 @@ describe('imageService', () => {
       const file = new File(['x'.repeat(1024 * 1024)], 'test.jpg', {
         type: 'image/jpeg',
       });
+
+      // Validate with Zod schema
+      const zodResult = imageFileSchema.safeParse({ file });
+      expect(zodResult.success).toBe(true);
 
       const result = imageService.validateImageFile(file);
 
@@ -24,6 +35,10 @@ describe('imageService', () => {
         type: 'image/png',
       });
 
+      // Validate with Zod schema
+      const zodResult = imageFileSchema.safeParse({ file });
+      expect(zodResult.success).toBe(true);
+
       const result = imageService.validateImageFile(file);
 
       expect(result.success).toBe(true);
@@ -34,6 +49,10 @@ describe('imageService', () => {
       const file = new File(['x'.repeat(1024 * 1024)], 'test.webp', {
         type: 'image/webp',
       });
+
+      // Validate with Zod schema
+      const zodResult = imageFileSchema.safeParse({ file });
+      expect(zodResult.success).toBe(true);
 
       const result = imageService.validateImageFile(file);
 
@@ -46,6 +65,10 @@ describe('imageService', () => {
         type: 'image/jpeg',
       });
 
+      // Validate with Zod schema
+      const zodResult = imageFileSchema.safeParse({ file });
+      expect(zodResult.success).toBe(false);
+
       const result = imageService.validateImageFile(file);
 
       expect(result.success).toBe(false);
@@ -57,6 +80,10 @@ describe('imageService', () => {
         type: 'application/pdf',
       });
 
+      // Validate with Zod schema
+      const zodResult = imageFileSchema.safeParse({ file });
+      expect(zodResult.success).toBe(false);
+
       const result = imageService.validateImageFile(file);
 
       expect(result.success).toBe(false);
@@ -67,6 +94,10 @@ describe('imageService', () => {
       const file = new File(['content'], 'image.gif', {
         type: 'image/gif',
       });
+
+      // Validate with Zod schema
+      const zodResult = imageFileSchema.safeParse({ file });
+      expect(zodResult.success).toBe(false);
 
       const result = imageService.validateImageFile(file);
 

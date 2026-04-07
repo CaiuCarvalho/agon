@@ -3,9 +3,10 @@
 import { OrderCard } from "./OrderCard";
 import { Button } from "@/components/ui/button";
 import { ShoppingBag, Loader2 } from "lucide-react";
+import { Order } from "@/types/order";
 
 interface OrderListProps {
-  orders: any[];
+  orders: Order[];
   isLoading?: boolean;
 }
 

@@ -6,13 +6,15 @@ import { OrderList } from "@/components/profile/OrderList";
 import { createClient } from "@/lib/supabase/client";
 import { toast } from "sonner";
 import { Package } from "lucide-react";
+import { Order } from "@/types/order";
+import { getErrorMessage } from "@/lib/utils/errorMessages";
 
 interface OrderHistoryViewerProps {
   userId: string;
 }
 
 export function OrderHistoryViewer({ userId }: OrderHistoryViewerProps) {
-  const [orders, setOrders] = useState<any[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   const supabase = createClient();
@@ -46,7 +48,7 @@ export function OrderHistoryViewer({ userId }: OrderHistoryViewerProps) {
       if (ordersError) throw ordersError;
 
       // Transform data to match expected format
-      const transformedOrders = ordersData.map((order: any) => ({
+      const transformedOrders = ordersData.map((order) => ({
         id: order.id,
         userId: order.user_id,
         status: order.status,
@@ -56,7 +58,7 @@ export function OrderHistoryViewer({ userId }: OrderHistoryViewerProps) {
         trackingCode: order.tracking_code,
         createdAt: order.created_at,
         updatedAt: order.updated_at,
-        items: order.order_items?.map((item: any) => ({
+        items: order.order_items?.map((item) => ({
           id: item.id,
           orderId: item.order_id,
           productId: item.product_id,
@@ -74,10 +76,11 @@ export function OrderHistoryViewer({ userId }: OrderHistoryViewerProps) {
       }));
 
       setOrders(transformedOrders);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error fetching orders:", error);
-      toast.error("Erro ao carregar histórico de pedidos");
+      toast.error(getErrorMessage(error));
     } finally {
+      // CRITICAL: Always reset loading state
       setIsLoading(false);
     }
   };

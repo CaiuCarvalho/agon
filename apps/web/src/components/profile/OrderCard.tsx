@@ -18,12 +18,14 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
+import { Order, OrderItem } from "@/types/order";
+import { LucideIcon } from "lucide-react";
 
 interface OrderCardProps {
-  order: any;
+  order: Order;
 }
 
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning"; icon: any; description: string }> = {
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "success" | "warning"; icon: LucideIcon; description: string }> = {
   PENDING: {
     label: "Aguardando Pagamento",
     variant: "warning",
@@ -144,7 +146,7 @@ export function OrderCard({ order }: OrderCardProps) {
                     <ShoppingBag className="h-3 w-3" /> Itens do Pedido
                   </h4>
                   <div className="grid gap-3">
-                    {order.items?.map((item: any, idx: number) => (
+                    {order.items?.map((item: OrderItem, idx: number) => (
                       <div key={idx} className="flex items-center justify-between p-3 rounded-lg bg-background/40 border border-border/20">
                         <div className="flex items-center gap-3">
                           <div className="h-12 w-12 rounded-md bg-muted/50 border border-border/10 overflow-hidden flex-shrink-0">
@@ -205,7 +207,7 @@ export function OrderCard({ order }: OrderCardProps) {
 }
 
 // Sub-component placeholder since we don't have ShoppingBag in the card scope
-function ShoppingBag(props: any) {
+function ShoppingBag(props: React.SVGProps<SVGSVGElement>) {
   return (
     <svg
       {...props}

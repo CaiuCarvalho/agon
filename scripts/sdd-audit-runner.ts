@@ -231,8 +231,8 @@ function auditSecrets(issues: AuditIssue[], files: string[]) {
 
       // 2.3 Dangerous env fallback (only flag if looks like a real secret, not a URL)
       if (line.includes('process.env.') && line.includes('||') && /['"]/.test(line)) {
-        // Ignore URL fallbacks which are safe
-        if (!line.includes('http://') && !line.includes('https://')) {
+        // Ignore URL fallbacks and safe boolean defaults which are safe
+        if (!line.includes('http://') && !line.includes('https://') && !line.includes('=== "true"')) {
           issues.push({
             severity: 'LOW', category: 'Segurança', file: relPath, line: lineNum,
             message: `Fallback hardcoded em env var (verificar se é segredo)`,

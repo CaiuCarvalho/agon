@@ -1,0 +1,99 @@
+name: Security Checks
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  check-secrets:
+    name: Check for Secrets
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Full history for better secret detection
+
+      - name: Run secrets scanner
+        run: |
+          chmod +x scripts/check-secrets.sh
+          ./scripts/check-secrets.sh
+
+  validate-rls:
+    name: Validate RLS Policies
+    runs-on: ubuntu-latest
+    # Only run on main branch (requires production credentials)
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install @supabase/supabase-js tsx
+
+      - name: Run RLS validation
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: npx tsx scripts/validate-rls.ts
+
+  typescript-check:
+    name: TypeScript Type Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+
+  environment-validation:
+    name: Validate Environment Config
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check .env.example exists
+        run: |
+          if [ ! -f .env.example ]; then
+            echo "❌ .env.example file is missing"
+            exit 1
+          fi
+          echo "✅ .env.example exists"
+
+      - name: Verify .gitignore excludes .env files
+        run: |
+          if ! grep -q "^\.env$" .gitignore; then
+            echo "❌ .gitignore does not exclude .env files"
+            exit 1
+          fi
+          echo "✅ .gitignore properly configured"
+
+      - name: Check for committed .env files
+        run: |
+          if git ls-files | grep -E "\.env$|\.env\.local$|\.env\.production$"; then
+            echo "❌ Found committed .env files"
+            exit 1
+          fi
+          echo "✅ No .env files committed"

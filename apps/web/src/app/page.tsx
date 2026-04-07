@@ -7,27 +7,19 @@ import Hero from "@/components/Hero";
 import CategoryBanners from "@/components/CategoryBanners";
 import ProductCard from "@/components/ProductCard";
 import Testimonials from "@/components/Testimonials";
-import { Truck, ShieldCheck, RefreshCcw, Zap, Star, Users } from "lucide-react";
+import { Truck, ShieldCheck, RefreshCcw, Zap, Star, Users, Loader2 } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
+import { useProducts } from "@/modules/products/hooks";
 
 // Imagens migradas para /public/images/
 const images = {
-  jersey: "/images/products/product-jersey.jpg",
-  scarf: "/images/products/product-scarf.jpg",
-  shorts: "/images/products/product-shorts.jpg",
-  ball: "/images/products/product-ball.jpg",
   structure: "/images/ui/structure_of_a_champion.png",
   pele: "/images/history/pele_celebration.png",
 };
 
-const featuredProducts = [
-  { id: "1", image: images.jersey, title: "Manto Titular 24/25 I", price: 349.90, badge: "Lançamento", category: "Match Jersey" },
-  { id: "2", image: images.scarf, title: "Jaqueta Anthem Brasil", price: 499.90, category: "Lifestyle" },
-  { id: "3", image: images.shorts, title: "Shorts Oficial Strike", price: 199.90, category: "Treino" },
-  { id: "4", image: images.ball, title: "Bola Profissional CBF", price: 149.90, badge: "Exclusivo", category: "Equipamentos" },
-];
-
 export default function Home() {
+  const { user } = useAuth();
   const legacyRef = useRef(null);
   const { scrollYProgress } = useScroll({
     target: legacyRef,
@@ -35,6 +27,13 @@ export default function Home() {
   });
 
   const yPos = useTransform(scrollYProgress, [0, 1], ["-20%", "20%"]);
+
+  // Buscar produtos reais do banco
+  const { data: productsData, isLoading: isLoadingProducts } = useProducts({ 
+    limit: 4,
+    sortBy: 'created_at',
+    sortOrder: 'desc'
+  });
 
   return (
     <main className="bg-background overflow-x-hidden">
@@ -75,11 +74,24 @@ export default function Home() {
             <div className="h-2 w-24 bg-primary mt-8" />
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.title} {...product} />
-            ))}
-          </div>
+          {isLoadingProducts ? (
+            <div className="flex items-center justify-center py-20">
+              <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+              {productsData?.products.slice(0, 4).map((product) => (
+                <ProductCard 
+                  key={product.id} 
+                  id={product.id}
+                  image={product.imageUrl}
+                  title={product.name}
+                  price={product.price}
+                  category={product.categoryId}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -87,11 +99,12 @@ export default function Home() {
       <section className="py-32 bg-muted/10">
         <div className="container mx-auto px-6 md:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="relative group overflow-hidden rounded-[2rem]">
+            <div className="relative group overflow-hidden rounded-[2rem] h-[500px]">
               <Image
                 src={images.structure}
                 alt="Elite Trophy"
                 fill
+                sizes="(max-width: 768px) 100vw, 50vw"
                 className="object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
@@ -160,6 +173,7 @@ export default function Home() {
                   src="https://res.cloudinary.com/dbcy4h37x/image/upload/v1775188055/brjlfom8l0fuwbsntx8s.jpg" 
                   alt="Agon Heritage & Community" 
                   fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
@@ -197,16 +211,13 @@ export default function Home() {
                 </p>
               </div>
 
-              <div className="flex flex-col sm:flex-row gap-6 pt-4">
+              <div className="pt-4">
                 <Link 
-                  href="/cadastro"
+                  href={user ? "/perfil" : "/cadastro"}
                   className="inline-flex items-center justify-center h-14 px-10 bg-primary text-white font-display text-xl uppercase tracking-widest rounded-full hover:scale-105 transition-all shadow-lg hover:shadow-primary/20"
                 >
                   Junte-se à Elite
                 </Link>
-                <button className="h-14 px-10 border border-border text-foreground font-display text-xl uppercase tracking-widest rounded-full hover:bg-muted transition-all">
-                  Nossa Jornada
-                </button>
               </div>
             </div>
           </div>
@@ -222,6 +233,7 @@ export default function Home() {
                 src="https://res.cloudinary.com/dbcy4h37x/image/upload/v1775188056/ikq1whvviiqvpsoiuxpp.jpg" 
                 className="invert brightness-0 object-contain" 
                 fill
+                sizes="160px"
                 alt="2026 Logo" 
               />
             </div>

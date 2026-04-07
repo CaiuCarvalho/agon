@@ -1,11 +1,10 @@
 "use client";
 import { motion } from "framer-motion";
-import { ShoppingBag, Heart } from "lucide-react";
+import { ShoppingBag, Heart, Loader2 } from "lucide-react";
 import Link from "next/link";
-import { useCart } from "@/modules/checkout/hooks/useCart";
-import { useWishlist } from "@/context/WishlistContext";
-import { toast } from "sonner";
-import { useState } from "react";
+import { useCartMutations } from "@/modules/cart/hooks/useCartMutations";
+import { useWishlistMutations } from "@/modules/wishlist/hooks/useWishlistMutations";
+import { useWishlist } from "@/modules/wishlist/hooks/useWishlist";
 import { trackProductClick } from "@/lib/analytics";
 
 interface ProductCardProps {
@@ -19,44 +18,31 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ id = "1", image, title, price, badge, category = "Manto Oficial", stock }: ProductCardProps) => {
-  const { addToCart } = useCart();
-  const { toggleFavorite, isFavorite } = useWishlist();
-  const [isToggling, setIsToggling] = useState(false);
+  const { addToCart, isAdding } = useCartMutations();
+  const { toggleWishlist, isAdding: isTogglingWishlist } = useWishlistMutations();
+  const { items: wishlistItems } = useWishlist();
   
-  const favorited = isFavorite(id);
+  // Check if product is in wishlist
+  const favorited = wishlistItems.some(item => item.productId === id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    addToCart(
-      { productId: id, quantity: 1, size: "Único" },
-      { productId: id, name: title, price, quantity: 1, size: "Único", imageUrl: image }
-    ).catch(() => {});
-    toast.success(`${title} adicionado ao carrinho!`);
+    
+    // Add to cart with default size "Único"
+    addToCart({
+      productId: id,
+      quantity: 1,
+      size: "Único"
+    });
   };
 
   const handleToggleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     
-    if (isToggling) return;
-    
-    setIsToggling(true);
-    try {
-      await toggleFavorite({ 
-        id, 
-        image_url: image, 
-        name: title, 
-        price,
-        category,
-        description: "",
-        features: [],
-        rating: 0,
-        reviews: 0
-      });
-    } finally {
-      setIsToggling(false);
-    }
+    // Toggle wishlist (add if not present, remove if present)
+    toggleWishlist(id);
   };
 
   return (
@@ -91,19 +77,23 @@ const ProductCard = ({ id = "1", image, title, price, badge, category = "Manto O
         
         <button 
           onClick={handleToggleFavorite}
-          disabled={isToggling}
+          disabled={isTogglingWishlist}
           className={`absolute right-4 top-4 z-10 h-8 w-8 flex items-center justify-center rounded-full backdrop-blur-sm shadow-sm transition-all duration-300 hover:scale-110 active:scale-90 ${
             favorited 
               ? "bg-primary text-white scale-110 opacity-100" 
               : "bg-white/80 text-foreground opacity-0 group-hover:opacity-100 hover:bg-white"
-          } ${isToggling ? "animate-pulse" : ""}`}
+          } ${isTogglingWishlist ? "animate-pulse" : ""}`}
         >
-          <motion.div
-            animate={favorited ? { scale: [1, 1.4, 1] } : {}}
-            transition={{ duration: 0.3 }}
-          >
-            <Heart className={`h-4 w-4 ${favorited ? "fill-current" : ""}`} />
-          </motion.div>
+          {isTogglingWishlist ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <motion.div
+              animate={favorited ? { scale: [1, 1.4, 1] } : {}}
+              transition={{ duration: 0.3 }}
+            >
+              <Heart className={`h-4 w-4 ${favorited ? "fill-current" : ""}`} />
+            </motion.div>
+          )}
         </button>
 
         <Link
@@ -124,11 +114,20 @@ const ProductCard = ({ id = "1", image, title, price, badge, category = "Manto O
         {/* Quick Add Button (Nike Style) */}
         <button 
           onClick={handleAddToCart}
-          disabled={stock === 0}
+          disabled={stock === 0 || isAdding}
           className={`absolute bottom-0 left-0 right-0 h-12 ${stock === 0 ? 'bg-muted cursor-not-allowed' : 'bg-primary'} text-white font-display text-sm uppercase tracking-widest translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-20 flex items-center justify-center gap-2`}
         >
-          <ShoppingBag className="h-4 w-4" />
-          {stock === 0 ? "Indisponível" : "Adicionar Rápido"}
+          {isAdding ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              Adicionando...
+            </>
+          ) : (
+            <>
+              <ShoppingBag className="h-4 w-4" />
+              {stock === 0 ? "Indisponível" : "Adicionar Rápido"}
+            </>
+          )}
         </button>
       </div>
 

@@ -118,7 +118,33 @@ O projeto Agon impõe um **Gate de Segurança Absoluto** contra o vazamento de s
 ### 🟡 Alinhamento Médio
 - **Placeholders de Teste**: `sk_test_` fora de diretórios de `/mocks` ou `/tests`.
 - **Heurística**: Strings de alta entropia (> 32 chars) ou padrões JWT/Base64 suspeitos.
-- **Fallbacks**: Uso de `process.env.KEY || "fallback"` com valores reais.
+- **Fallbacks Inseguros**: Uso de `process.env.KEY || "fallback"` com valores sensíveis hardcoded.
+
+#### ✅ Padrões Seguros para Variáveis de Ambiente
+
+**Fail-Fast (Recomendado para valores sensíveis)**:
+```typescript
+// ❌ ERRADO - fallback hardcoded pode expor segredo
+const apiKey = process.env.API_KEY || "default_secret_key"
+
+// ✅ CORRETO - falha imediatamente se variável não existe
+if (!process.env.API_KEY) {
+  throw new Error("Missing required API_KEY")
+}
+const apiKey = process.env.API_KEY
+```
+
+**Safe Defaults (Apenas para valores não-sensíveis)**:
+```typescript
+// ✅ CORRETO - URLs públicas são seguras
+const apiUrl = process.env.API_URL || "https://api.example.com"
+
+// ✅ CORRETO - boolean flags são seguros
+const isFeatureEnabled = process.env.FEATURE_FLAG === "true"
+
+// ✅ CORRETO - valores numéricos não-sensíveis
+const port = parseInt(process.env.PORT || "3000", 10)
+```
 
 ### 🤖 Regras para Geração por Agentes (AI)
 Para garantir a segurança, qualquer agente deve:

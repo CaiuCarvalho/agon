@@ -1,0 +1,238 @@
+/**
+ * useCart Hook
+ * 
+ * Manages cart data fetching, caching, and real-time synchronization.
+ * 
+ * Key features:
+ * - Fetches cart from database (authenticated) or localStorage (guest)
+ * - Subscribes to Supabase Realtime for cross-device sync
+ * - Implements migration gate to prevent empty cart flash
+ * - Handles reconnection with exponential backoff
+ * - Provides polling fallback when Realtime fails
+ * - Filters own events by client_id to prevent loops
+ * - Calculates cart summary (totalItems, subtotal)
+ * 
+ * @module useCart
+ */
+
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useState, useRef } from 'react';
+import { useAuth } from '@/hooks/useAuth';
+import { createClient } from '@/lib/supabase/client';
+import { cartService } from '../services/cartService';
+import { localStorageService } from '../services/localStorageService';
+import { useMigrationStatus } from './useMigrationStatus';
+import type { CartItem } from '../types';
+
+// Generate unique client ID for this session to filter own events
+const CLIENT_ID = crypto.randomUUID();
+
+/**
+ * Transform database row (snake_case) to CartItem (camelCase)
+ * This is needed for Realtime events which return raw database rows
+ */
+function transformCartItemRow(row: any): CartItem {
+  return {
+    id: row.id,
+    userId: row.user_id,
+    productId: row.product_id,
+    quantity: row.quantity,
+    size: row.size,
+    priceSnapshot: parseFloat(row.price_snapshot),
+    productNameSnapshot: row.product_name_snapshot,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+    product: row.product ? {
+      id: row.product.id,
+      name: row.product.name,
+      description: row.product.description,
+      price: parseFloat(row.product.price),
+      categoryId: row.product.category_id,
+      imageUrl: row.product.image_url,
+      stock: row.product.stock,
+      features: row.product.features || [],
+      rating: parseFloat(row.product.rating || 0),
+      reviews: row.product.reviews || 0,
+      createdAt: row.product.created_at,
+      updatedAt: row.product.updated_at,
+      deletedAt: row.product.deleted_at,
+    } : undefined,
+  };
+}
+
+export function useCart() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const migrationStatus = useMigrationStatus();
+  
+  // Realtime reconnection state
+  const reconnectAttempts = useRef(0);
+  const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected'>('disconnected');
+  
+  // Fetch cart items (blocked until migration completes or errors)
+  const { data: items = [], isLoading, error } = useQuery({
+    queryKey: ['cart', user?.id],
+    queryFn: async () => {
+      console.log('[Cart] Fetching cart items for user:', user?.id);
+      if (user) {
+        // Authenticated: fetch from database
+        const items = await cartService.getCartItems(user.id);
+        console.log('[Cart] Fetched items from database:', items.length);
+        return items;
+      } else {
+        // Guest: fetch from localStorage
+        const localCart = localStorageService.getCart();
+        console.log('[Cart] Fetched items from localStorage:', localCart.items.length);
+        // Return items in CartItem format (without product details for now)
+        return localCart.items.map(item => ({
+          id: `local-${item.productId}-${item.size}`,
+          userId: '',
+          productId: item.productId,
+          quantity: item.quantity,
+          size: item.size,
+          priceSnapshot: 0,
+          productNameSnapshot: '',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })) as CartItem[];
+      }
+    },
+    enabled: migrationStatus === 'complete' || migrationStatus === 'error', // Migration gate - allow queries even on error
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+  
+  // Subscribe to Realtime updates (authenticated users only)
+  useEffect(() => {
+    if (!user || (migrationStatus !== 'complete' && migrationStatus !== 'error')) return;
+    
+    const supabase = createClient();
+    
+    // Use consistent channel name (no timestamp) to avoid duplicate channels
+    const channelName = `cart:${user.id}`;
+    
+    // Remove any existing channel with the same name before creating a new one
+    // Note: Supabase adds "realtime:" prefix, so we need to check if topic includes our channel name
+    supabase.getChannels().forEach(ch => {
+      if (ch.topic.includes(channelName)) {
+        ch.unsubscribe();
+        supabase.removeChannel(ch);
+      }
+    });
+    
+    const channel = supabase.channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cart_items',
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          console.log('Cart realtime event:', payload);
+          
+          // Filter out events from this client to prevent loops
+          if ((payload.new as any)?.client_id === CLIENT_ID) {
+            return;
+          }
+          
+          // Use setQueryData instead of invalidateQueries to apply deltas
+          // This prevents refetch loops and provides instant updates
+          queryClient.setQueryData(['cart', user.id], (old: CartItem[] = []) => {
+            if (payload.eventType === 'INSERT') {
+              // Add new item
+              return [...old, transformCartItemRow(payload.new)];
+            } else if (payload.eventType === 'UPDATE') {
+              // Update existing item
+              return old.map(item =>
+                item.id === payload.new.id ? transformCartItemRow(payload.new) : item
+              );
+            } else if (payload.eventType === 'DELETE') {
+              // Remove item
+              return old.filter(item => item.id !== payload.old.id);
+            }
+            return old;
+          });
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          setRealtimeStatus('connected');
+          reconnectAttempts.current = 0;
+          stopPolling();
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          setRealtimeStatus('disconnected');
+          handleReconnect();
+        }
+      });
+    
+    return () => {
+      // Properly unsubscribe and remove channel
+      channel.unsubscribe();
+      supabase.removeChannel(channel);
+      stopPolling();
+    };
+  }, [user, queryClient, migrationStatus]);
+  
+  /**
+   * Handle Realtime reconnection with exponential backoff
+   * Delays: 1s, 2s, 4s, 8s, max 30s
+   */
+  const handleReconnect = () => {
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+    reconnectAttempts.current++;
+    
+    // Start polling as fallback
+    startPolling();
+  };
+  
+  /**
+   * Start polling fallback (30s interval) when Realtime fails
+   */
+  const startPolling = () => {
+    if (pollingInterval.current || !user) return;
+    
+    pollingInterval.current = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
+    }, 30000); // Poll every 30s
+  };
+  
+  /**
+   * Stop polling fallback when Realtime reconnects
+   */
+  const stopPolling = () => {
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current);
+      pollingInterval.current = null;
+    }
+  };
+  
+  // Calculate cart summary
+  const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
+  const subtotal = items.reduce(
+    (sum, item) => sum + (item.product?.price || 0) * item.quantity,
+    0
+  );
+  
+  // Show loading during migration
+  if (migrationStatus === 'in_progress') {
+    return {
+      items: [],
+      totalItems: 0,
+      subtotal: 0,
+      isLoading: true,
+      error: null,
+      realtimeStatus,
+    };
+  }
+  
+  return {
+    items,
+    totalItems,
+    subtotal,
+    isLoading,
+    error,
+    realtimeStatus,
+  };
+}

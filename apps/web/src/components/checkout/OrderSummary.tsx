@@ -2,9 +2,10 @@
 
 import { CreditCard, QrCode, ShieldCheck, Loader2 } from "lucide-react";
 import { formatCurrency } from "@/lib/utils";
+import { CartItem } from "@/types/cart";
 
 interface OrderSummaryProps {
-  items: any[];
+  items: CartItem[];
   subtotal: number;
   shippingCost: number;
   paymentMethod: "PIX" | "CARD";

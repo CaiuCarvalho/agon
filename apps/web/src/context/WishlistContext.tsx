@@ -33,23 +33,39 @@ const STORAGE_KEY = "agon-wishlist";
 export function WishlistProvider({ children }: { children: React.ReactNode }) {
   const [items, setItems] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const { user, isAuthenticated, token } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   // 1. Carregar favoritos iniciais
   useEffect(() => {
     const loadWishlist = async () => {
       setIsLoading(true);
       try {
-        if (isAuthenticated && token) {
-          // Carregar do Banco de Dados
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/wishlist`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
-          const result = await response.json();
-          if (response.ok) {
-            setItems(result.data.map((item: { product: Product }) => item.product));
+        if (isAuthenticated && user) {
+          // Carregar do Supabase diretamente (não há API backend)
+          const { createClient } = await import('@/lib/supabase/client');
+          const supabase = createClient();
+          
+          const { data, error } = await supabase
+            .from('wishlist_items')
+            .select('product_id, products(*)')
+            .eq('user_id', user.id);
+          
+          if (!error && data) {
+            setItems(data.map((item: any) => ({
+              id: item.products.id,
+              name: item.products.name,
+              description: item.products.description,
+              price: parseFloat(item.products.price),
+              categoryId: item.products.category_id,
+              imageUrl: item.products.image_url,
+              stock: item.products.stock,
+              features: item.products.features || [],
+              rating: parseFloat(item.products.rating || 0),
+              reviews: item.products.reviews || 0,
+              createdAt: item.products.created_at,
+              updatedAt: item.products.updated_at,
+              deletedAt: item.products.deleted_at,
+            })));
           }
         } else {
           // Carregar do LocalStorage (Visitante)
@@ -66,7 +82,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
     };
 
     loadWishlist();
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, user]);
 
   // 2. Persistir no LocalStorage apenas para visitantes
   useEffect(() => {
@@ -97,22 +113,31 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
           : [...prev, product]
       );
 
-      // Sincronização com Backend se logado
-      if (isAuthenticated) {
+      // Sincronização com Supabase se logado
+      if (isAuthenticated && user) {
         try {
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/wishlist/toggle/${product.id}`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${token}`,
-              },
-            }
-          );
-
-          if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.message || "Erro ao atualizar favoritos.");
+          const { createClient } = await import('@/lib/supabase/client');
+          const supabase = createClient();
+          
+          if (alreadyFavorite) {
+            // Remove from wishlist
+            const { error } = await supabase
+              .from('wishlist_items')
+              .delete()
+              .eq('user_id', user.id)
+              .eq('product_id', product.id);
+            
+            if (error) throw error;
+          } else {
+            // Add to wishlist
+            const { error } = await supabase
+              .from('wishlist_items')
+              .insert({
+                user_id: user.id,
+                product_id: product.id,
+              });
+            
+            if (error) throw error;
           }
           
           toast.success(alreadyFavorite ? "Removido dos favoritos" : "Adicionado aos favoritos!");
@@ -128,7 +153,7 @@ export function WishlistProvider({ children }: { children: React.ReactNode }) {
         toast.success(alreadyFavorite ? "Removido dos favoritos" : "Salvo nos favoritos (Local)");
       }
     },
-    [isAuthenticated, isFavorite, items.length]
+    [isAuthenticated, isFavorite, items.length, user]
   );
 
   return (

@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { AddressForm } from "@/components/profile/AddressForm";
-import { createClient } from "@/lib/supabase/client";
+import { addressService } from "@/modules/address/services/addressService";
 import { toast } from "sonner";
 import { MapPin, Plus, Pencil, Trash2, Star, Loader2 } from "lucide-react";
 import {
@@ -18,6 +18,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { getErrorMessage } from "@/lib/utils/errorMessages";
 
 interface Address {
   id: string;
@@ -58,8 +59,6 @@ export function AddressManager({ userId }: AddressManagerProps) {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
 
-  const supabase = createClient();
-
   // Fetch addresses on mount
   useEffect(() => {
     fetchAddresses();
@@ -68,31 +67,8 @@ export function AddressManager({ userId }: AddressManagerProps) {
   const fetchAddresses = async () => {
     try {
       setIsLoading(true);
-      const { data, error } = await supabase
-        .from("addresses")
-        .select("*")
-        .eq("user_id", userId)
-        .order("is_default", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      setAddresses(
-        data.map((addr: any) => ({
-          id: addr.id,
-          userId: addr.user_id,
-          zipCode: addr.zip_code,
-          street: addr.street,
-          number: addr.number,
-          complement: addr.complement,
-          neighborhood: addr.neighborhood,
-          city: addr.city,
-          state: addr.state,
-          isDefault: addr.is_default,
-          createdAt: addr.created_at,
-          updatedAt: addr.updated_at,
-        }))
-      );
+      const addresses = await addressService.getAddresses(userId);
+      setAddresses(addresses);
     } catch (error) {
       console.error("Error fetching addresses:", error);
       toast.error("Erro ao carregar endereços");
@@ -103,11 +79,6 @@ export function AddressManager({ userId }: AddressManagerProps) {
 
   // Handle create address
   const handleCreate = async (data: AddressFormValues) => {
-    if (addresses.length >= 5) {
-      toast.error("Você atingiu o limite de 5 endereços");
-      return;
-    }
-
     const tempId = `temp-${Date.now()}`;
     const optimisticAddress: Address = {
       id: tempId,
@@ -119,66 +90,28 @@ export function AddressManager({ userId }: AddressManagerProps) {
 
     // Optimistic update
     setAddresses((prev) => [...prev, optimisticAddress]);
-    setIsSubmitting(true);
-
+    
     try {
-      // If setting as default, unset previous default
-      if (data.isDefault) {
-        await supabase
-          .from("addresses")
-          .update({ is_default: false })
-          .eq("user_id", userId)
-          .eq("is_default", true);
-      }
+      setIsSubmitting(true);
 
-      const { data: newAddress, error } = await supabase
-        .from("addresses")
-        .insert({
-          user_id: userId,
-          zip_code: data.zipCode,
-          street: data.street,
-          number: data.number,
-          complement: data.complement,
-          neighborhood: data.neighborhood,
-          city: data.city,
-          state: data.state,
-          is_default: data.isDefault,
-        })
-        .select()
-        .single();
-
-      if (error) throw error;
+      const newAddress = await addressService.createAddress(userId, data);
 
       // Replace temp with real
       setAddresses((prev) =>
         prev.map((addr) =>
-          addr.id === tempId
-            ? {
-                id: newAddress.id,
-                userId: newAddress.user_id,
-                zipCode: newAddress.zip_code,
-                street: newAddress.street,
-                number: newAddress.number,
-                complement: newAddress.complement,
-                neighborhood: newAddress.neighborhood,
-                city: newAddress.city,
-                state: newAddress.state,
-                isDefault: newAddress.is_default,
-                createdAt: newAddress.created_at,
-                updatedAt: newAddress.updated_at,
-              }
-            : addr
+          addr.id === tempId ? newAddress : addr
         )
       );
 
       toast.success("Endereço adicionado com sucesso!");
       setIsFormOpen(false);
-    } catch (error) {
+    } catch (error: any) {
       // Rollback on failure
       setAddresses((prev) => prev.filter((addr) => addr.id !== tempId));
-      toast.error("Erro ao adicionar endereço");
-      console.error(error);
+      console.error("Error creating address:", error);
+      toast.error(getErrorMessage(error));
     } finally {
+      // CRITICAL: Always reset submitting state
       setIsSubmitting(false);
     }
   };
@@ -188,7 +121,6 @@ export function AddressManager({ userId }: AddressManagerProps) {
     if (!editingAddress) return;
 
     const previousAddresses = [...addresses];
-    const previousData = { ...editingAddress };
 
     // Optimistic update
     setAddresses((prev) =>
@@ -196,43 +128,22 @@ export function AddressManager({ userId }: AddressManagerProps) {
         addr.id === editingAddress.id ? { ...addr, ...data } : addr
       )
     );
-    setIsSubmitting(true);
-
+    
     try {
-      // If setting as default, unset previous default
-      if (data.isDefault && !editingAddress.isDefault) {
-        await supabase
-          .from("addresses")
-          .update({ is_default: false })
-          .eq("user_id", userId)
-          .eq("is_default", true);
-      }
+      setIsSubmitting(true);
 
-      const { error } = await supabase
-        .from("addresses")
-        .update({
-          zip_code: data.zipCode,
-          street: data.street,
-          number: data.number,
-          complement: data.complement,
-          neighborhood: data.neighborhood,
-          city: data.city,
-          state: data.state,
-          is_default: data.isDefault,
-        })
-        .eq("id", editingAddress.id);
-
-      if (error) throw error;
+      await addressService.updateAddress(userId, editingAddress.id, data);
 
       toast.success("Endereço atualizado com sucesso!");
       setIsFormOpen(false);
       setEditingAddress(null);
-    } catch (error) {
+    } catch (error: any) {
       // Rollback on failure
       setAddresses(previousAddresses);
-      toast.error("Erro ao atualizar endereço");
-      console.error(error);
+      console.error("Error updating address:", error);
+      toast.error(getErrorMessage(error));
     } finally {
+      // CRITICAL: Always reset submitting state
       setIsSubmitting(false);
     }
   };
@@ -247,10 +158,7 @@ export function AddressManager({ userId }: AddressManagerProps) {
     setAddressToDelete(null);
 
     try {
-      const { error } = await supabase.from("addresses").delete().eq("id", id);
-
-      if (error) throw error;
-
+      await addressService.deleteAddress(userId, id);
       toast.success("Endereço removido com sucesso!");
     } catch (error) {
       // Rollback on failure
@@ -273,21 +181,7 @@ export function AddressManager({ userId }: AddressManagerProps) {
     );
 
     try {
-      // Unset previous default
-      await supabase
-        .from("addresses")
-        .update({ is_default: false })
-        .eq("user_id", userId)
-        .eq("is_default", true);
-
-      // Set new default
-      const { error } = await supabase
-        .from("addresses")
-        .update({ is_default: true })
-        .eq("id", id);
-
-      if (error) throw error;
-
+      await addressService.setDefaultAddress(userId, id);
       toast.success("Endereço padrão atualizado!");
     } catch (error) {
       // Rollback on failure

@@ -5,7 +5,7 @@ import { ShoppingBag, Menu, User as UserIcon, Search, X } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
-import { useCart } from "@/modules/checkout/hooks/useCart";
+import { useCart } from "@/modules/cart/hooks/useCart";
 import Sidebar from "./Sidebar";
 import QuickSearch from "./QuickSearch";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
@@ -14,9 +14,9 @@ import { ProductDTO } from "@/lib/utils";
 
 const navLinks = [
   { label: "Mantos", href: "/#produtos" },
-  { label: "Treino", href: "/#categorias" },
-  { label: "Acessórios", href: "/#categorias" },
   { label: "Seleção", href: "/#produtos" },
+  { label: "Produtos", href: "/products" },
+  { label: "Clubes", href: "/products?category=clubes" },
 ];
 
 const Navbar = () => {
@@ -35,10 +35,10 @@ const Navbar = () => {
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const isAuthPage = pathname?.includes("/login") || pathname?.includes("/cadastro");
+  const isCheckoutPage = pathname?.startsWith('/checkout');
 
   const [isClient, setIsClient] = useState(false);
-  const { cart, openCart } = useCart();
-  const totalItems = cart?.items.reduce((acc, i) => acc + i.quantity, 0) || 0;
+  const { items, totalItems } = useCart();
 
   useEffect(() => {
     setIsClient(true);
@@ -98,7 +98,7 @@ const Navbar = () => {
     <>
       <nav 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-          scrolled || isSearchOpen ? "glass-nike h-16 shadow-nike" : "bg-transparent h-24"
+          scrolled || isSearchOpen || isCheckoutPage ? "glass-nike h-16 shadow-nike" : "bg-transparent h-24"
         }`}
       >
         <div className="container mx-auto h-full flex items-center justify-between px-6 md:px-12 relative">
@@ -162,14 +162,14 @@ const Navbar = () => {
                     </Link>
                   )}
 
-                  <button onClick={openCart} className="group p-2 -ml-2 relative text-foreground hover:text-primary transition-all active:scale-95">
+                  <Link href="/cart" className="group p-2 -ml-2 relative text-foreground hover:text-primary transition-all active:scale-95">
                     <ShoppingBag className="h-6 w-6" />
                     {isClient && totalItems > 0 && (
                       <span className="absolute right-0 top-0 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] font-black text-white shadow-neon-tiny animate-in zoom-in-50">
                         {totalItems}
                       </span>
                     )}
-                  </button>
+                  </Link>
 
                   <button
                     className="group p-2 -mr-2 text-foreground hover:text-primary transition-all active:scale-90"

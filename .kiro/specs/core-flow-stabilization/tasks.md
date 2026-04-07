@@ -1,0 +1,188 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Core Flows Insert Failures
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bugs exist
+  - **Scoped PBT Approach**: For deterministic bugs, scope the property to the concrete failing case(s) to ensure reproducibility
+  - Test implementation details from Bug Condition in design:
+    - Cart add item fails when table doesn't exist OR RPC missing OR fallback incomplete
+    - Wishlist add item fails when table doesn't exist OR trigger missing
+    - Address insert fails when table doesn't exist OR business logic in UI component
+  - The test assertions should match the Expected Behavior Properties from design:
+    - Cart items should insert with price_snapshot and product_name_snapshot
+    - Wishlist items should insert successfully
+    - Addresses should insert successfully via service layer
+  - Run test on UNFIXED code (before applying migrations)
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found to understand root cause:
+    - "relation cart_items does not exist"
+    - "relation wishlist_items does not exist"
+    - "relation addresses does not exist"
+    - "null value in column price_snapshot violates not-null constraint"
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Non-Insert Operations Unchanged
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs:
+    - Cart update/delete operations
+    - Wishlist remove operations
+    - Address edit/delete operations
+    - Guest user localStorage functionality
+    - Guest-to-authenticated migration
+    - Optimistic UI updates with rollback
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements:
+    - Cart update quantity continues to work
+    - Cart delete continues to work
+    - Wishlist remove continues to work
+    - Address edit continues to work
+    - Address delete continues to work
+    - Guest operations use localStorage
+    - Migration on login works
+    - Optimistic UI with rollback works
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3, 3.4, 4.1, 4.2, 4.3, 5.1, 5.2, 5.3_
+
+- [x] 3. Fix for core flow stabilization
+
+  - [x] 3.1 PHASE 1: Database Validation and Migration Application
+    - Run verification queries in Supabase Dashboard SQL Editor
+    - Check if tables exist: cart_items, wishlist_items, addresses, products
+    - Check if RPC functions exist: add_to_cart_atomic, migrate_cart_items, migrate_wishlist_items
+    - Check if RLS is enabled on all tables
+    - Check if RLS policies exist for SELECT, INSERT, UPDATE, DELETE
+    - If tables don't exist, apply migrations in order:
+      - Cart migrations: 20260404000001, 20260404000004, 20260404000006, 20260404000007
+      - Wishlist migrations: 20260404000002, 20260404000003, 20260404000005
+      - Address migration: addresses section from supabase-user-profile-schema.sql
+      - Checkout migrations: APPLY_CHECKOUT_MIGRATIONS.sql (prerequisite for future work)
+    - Re-run verification queries to confirm all tables, RPC functions, and policies exist
+    - _Bug_Condition: NOT EXISTS table OR NOT EXISTS function OR NOT EXISTS policy_
+    - _Expected_Behavior: All tables, RPC functions, and RLS policies exist and are properly configured_
+    - _Preservation: Existing data in database remains unchanged_
+    - _Requirements: 1.4, 2.3, 3.2, 4.1, 4.2, 4.3_
+
+  - [x] 3.2 PHASE 2: Cart Flow Fixes
+    - Fix fallback INSERT in apps/web/src/modules/cart/services/cartService.ts (lines 157-171)
+    - Add product fetch before fallback INSERT to get price and name for snapshot fields
+    - Include price_snapshot and product_name_snapshot in INSERT statement
+    - Add validation that product exists and is not soft-deleted (deleted_at IS NULL)
+    - Handle product not found error with user-friendly message
+    - _Bug_Condition: fallback_triggered AND missing_snapshot_fields_
+    - _Expected_Behavior: Fallback INSERT includes price_snapshot and product_name_snapshot from product fetch_
+    - _Preservation: RPC path (primary) continues to work unchanged, only fallback path is modified_
+    - _Requirements: 1.1, 1.2, 1.3, 1.5_
+
+  - [x] 3.3 PHASE 3: Wishlist Flow Fixes
+    - Add retry logic to apps/web/src/modules/wishlist/services/wishlistService.ts
+    - Import withRetry utility from cart service or create shared utility
+    - Wrap all Supabase calls with withRetry for network resilience:
+      - getWishlistItems
+      - addToWishlist
+      - removeFromWishlist
+      - removeFromWishlistByProductId
+      - isInWishlist
+      - clearWishlist
+    - Configure retry with 2 attempts and exponential backoff (consistent with cart service)
+    - _Bug_Condition: no_retry_on_network_error_
+    - _Expected_Behavior: Network errors trigger automatic retry with exponential backoff_
+    - _Preservation: Successful operations continue to work unchanged, only error handling is enhanced_
+    - _Requirements: 2.1, 2.2, 2.5_
+
+  - [x] 3.4 PHASE 4: Address Flow Refactor
+    - Create new service layer: apps/web/src/modules/address/services/addressService.ts
+    - Implement addressService with functions:
+      - getAddresses(userId): Promise<Address[]>
+      - createAddress(userId, input): Promise<Address>
+      - updateAddress(userId, addressId, input): Promise<Address>
+      - deleteAddress(userId, addressId): Promise<void>
+      - setDefaultAddress(userId, addressId): Promise<void>
+    - Add Zod validation using addressSchema.parse(input)
+    - Add retry logic using withRetry for all operations
+    - Implement snake_case to camelCase transformation
+    - Implement atomic default address updates (unset previous, set new)
+    - Enforce 5-address limit
+    - Add user ownership validation
+    - Refactor apps/web/src/components/profile/AddressManager.tsx:
+      - Remove all direct Supabase calls
+      - Replace with addressService calls
+      - Keep optimistic UI logic in component
+      - Keep toast notifications in component
+      - Keep state management in component
+    - _Bug_Condition: business_logic_in_ui_component_
+    - _Expected_Behavior: Business logic in service layer, UI component only handles presentation and state_
+    - _Preservation: Address operations continue to work with same UX, only architecture is improved_
+    - _Requirements: 3.1, 3.3, 3.4, 5.1_
+
+  - [x] 3.5 PHASE 5: Service Standardization
+    - Create new utility: apps/web/src/lib/utils/databaseErrors.ts
+    - Define DATABASE_ERROR_CODES constants:
+      - UNIQUE_VIOLATION: '23505'
+      - NOT_NULL_VIOLATION: '23502'
+      - FOREIGN_KEY_VIOLATION: '23503'
+      - RPC_NOT_FOUND: '42883'
+      - CONNECTION_ERROR: 'PGRST301'
+      - TIMEOUT: 'PGRST504'
+    - Implement isRetryableError(error) function
+    - Implement getUserFriendlyMessage(error) function
+    - Update cartService.ts to use isRetryableError and getUserFriendlyMessage
+    - Update wishlistService.ts to use isRetryableError and getUserFriendlyMessage
+    - Update addressService.ts to use isRetryableError and getUserFriendlyMessage
+    - _Bug_Condition: inconsistent_error_handling_
+    - _Expected_Behavior: Consistent error handling with specific error codes and user-friendly messages_
+    - _Preservation: Error handling behavior remains functionally equivalent, only consistency is improved_
+    - _Requirements: 5.2, 5.3, 5.4_
+
+  - [x] 3.6 PHASE 6: Checkout Implementation Preparation
+    - Verify orders and order_items tables exist in Supabase Dashboard
+    - Verify create_order_atomic RPC function exists
+    - Verify cart items can be successfully added (prerequisite for checkout)
+    - Verify addresses can be successfully saved (prerequisite for checkout)
+    - Document verification results
+    - Note: Actual checkout implementation is out of scope for this bugfix
+    - _Bug_Condition: N/A (verification only)_
+    - _Expected_Behavior: Checkout prerequisites are met and documented_
+    - _Preservation: No code changes, only verification_
+    - _Requirements: N/A (preparation for future work)_
+
+  - [x] 3.7 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Core Flows Insert Successfully
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify all three flows succeed:
+      - Cart add item inserts with price_snapshot and product_name_snapshot
+      - Wishlist add item inserts successfully
+      - Address insert succeeds via service layer
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 2.1, 2.2, 2.3, 2.4, 3.1, 3.2, 3.3_
+
+  - [x] 3.8 Verify preservation tests still pass
+    - **Property 2: Preservation** - Non-Insert Operations Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Verify all preserved behaviors:
+      - Cart update/delete operations work
+      - Wishlist remove operations work
+      - Address edit/delete operations work
+      - Guest user localStorage functionality works
+      - Guest-to-authenticated migration works
+      - Optimistic UI updates with rollback work
+    - Confirm all tests still pass after fix (no regressions)
+
+- [x] 4. Checkpoint - Ensure all tests pass and manual validation complete
+  - Run all automated tests (unit, integration, property-based)
+  - Execute manual testing checklist for Cart, Wishlist, and Address flows
+  - Run database verification queries to confirm schema is correct
+  - Verify no regressions in existing functionality
+  - Document any issues found and resolve before marking complete
+  - Ask the user if questions arise or if additional validation is needed

@@ -14,14 +14,6 @@ export interface Product {
   reviews: number;
 }
 
-export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image_url: string;
-}
-
 export interface NavLink {
   label: string;
   href: string;
@@ -33,3 +25,9 @@ export const NAV_LINKS: NavLink[] = [
   { label: "Sobre", href: "#sobre" },
   { label: "Contato", href: "#contato" },
 ];
+
+// Re-export types from specialized modules
+export * from "./form";
+export * from "./address";
+export * from "./order";
+export * from "./cart";

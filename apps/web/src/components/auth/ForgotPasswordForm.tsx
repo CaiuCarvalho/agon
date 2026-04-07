@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, ControllerRenderProps } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Loader2, Mail, ArrowRight } from "lucide-react";
@@ -16,6 +16,7 @@ import {
   FormMessage 
 } from "@/components/ui/form";
 import { toast } from "sonner";
+import { ForgotPasswordFormValues } from "@/types/form";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("E-mail inválido."),
@@ -66,7 +67,7 @@ export function ForgotPasswordForm({ onSuccess, onBack }: ForgotPasswordFormProp
         <FormField
           control={form.control}
           name="email"
-          render={({ field }: { field: any }) => (
+          render={({ field }: { field: ControllerRenderProps<ForgotPasswordValues, "email"> }) => (
             <FormItem>
               <FormLabel className="text-[10px] uppercase font-bold tracking-widest text-muted-foreground">
                 E-mail da Conta
