@@ -171,8 +171,8 @@ export async function POST(request: NextRequest) {
     const preferenceTimestamp = new Date().toISOString();
     console.log(`[${preferenceTimestamp}] [CHECKOUT] Step 8: Creating Mercado Pago preference...`);
     let preference;
+    const startTime = Date.now(); // Declare outside try block so it's accessible in catch
     try {
-      const startTime = Date.now();
       const createTimestamp = new Date().toISOString();
       console.log(`[${createTimestamp}] Creating Mercado Pago preference...`, {
         orderId: orderResult.order_id,
