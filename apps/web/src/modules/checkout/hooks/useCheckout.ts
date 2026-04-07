@@ -28,6 +28,20 @@ export function useCheckout() {
         body: JSON.stringify(request),
       });
       
+      // Check if response is JSON
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        // Response is not JSON (probably HTML error page)
+        const text = await response.text();
+        console.error('API returned non-JSON response:', {
+          status: response.status,
+          statusText: response.statusText,
+          contentType,
+          body: text.substring(0, 500), // Log first 500 chars
+        });
+        throw new Error(`Erro no servidor (${response.status}). Verifique os logs do servidor.`);
+      }
+      
       const data: CreateOrderWithPaymentResponse = await response.json();
       
       if (!response.ok || !data.success) {

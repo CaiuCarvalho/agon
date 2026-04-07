@@ -1,0 +1,95 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Checkout 502 Errors
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: For deterministic bugs, scope the property to the concrete failing cases to ensure reproducibility
+  - Test implementation details from Bug Condition in design:
+    - Test that checkout API returns 502 on timeout/network errors (mock Mercado Pago API delays)
+    - Mock scenarios: API timeout (>30s), network errors (ECONNREFUSED), API errors (500)
+  - The test assertions should match the Expected Behavior Properties from design:
+    - After fix: checkout API should return appropriate error codes (400, 401, 500, 503, 504) instead of 502
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found to understand root cause:
+    - Does checkout API return 502 on timeout?
+    - What error messages are logged?
+    - What is the actual timeout duration?
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 1.4_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Successful Checkout Flows
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs:
+    - Test that successful checkout requests (valid auth, valid shipping data, Mercado Pago responds correctly) return HTTP 200 with order details
+    - Test that cart is cleared after successful checkout
+    - Test that order and payment records are created correctly
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements:
+    - Property: Successful checkout flows produce same order structure and payment records
+    - Property: Cart clearing behavior remains unchanged
+    - Property: Order creation and payment processing remain unchanged
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.3, 3.4, 3.5_
+
+- [x] 3. Fix for checkout 502 errors
+
+  - [x] 3.1 Add defensive error handling to checkout API
+    - Open apps/web/src/app/api/checkout/create-order/route.ts
+    - Add request timeout logging (timestamp before/after Mercado Pago API calls)
+    - Improve error logging (full stack traces, sanitized request payload, env var presence)
+    - Add timeout error handling (catch timeout errors, return 504 Gateway Timeout instead of 502)
+    - Add network error handling (catch ECONNREFUSED/ENOTFOUND, return 503 Service Unavailable)
+    - Preserve existing try-catch blocks, rollback logic, and error responses
+    - _Bug_Condition: isBugCondition(input) where checkout encounters timeout/network errors_
+    - _Expected_Behavior: Checkout API returns appropriate error codes (400, 401, 500, 503, 504) with descriptive messages instead of 502_
+    - _Preservation: Successful checkout flows remain unchanged (Requirements 3.3, 3.4, 3.5)_
+    - _Requirements: 1.4, 2.4_
+
+  - [x] 3.2 Increase Mercado Pago SDK timeout and add retry logic
+    - Open apps/web/src/modules/payment/services/mercadoPagoService.ts
+    - Increase SDK timeout from 15000ms to 30000ms for production stability
+    - Add simple retry mechanism (1 retry with 2000ms exponential backoff) for transient failures
+    - Wrap preference.create() in retry logic (retry once if first attempt fails with timeout/network error)
+    - Improve error messages to include status code and response body if available
+    - _Bug_Condition: isBugCondition(input) where Mercado Pago API times out or returns transient errors_
+    - _Expected_Behavior: SDK handles timeouts gracefully with retries and descriptive errors_
+    - _Preservation: Successful preference creation remains unchanged_
+    - _Requirements: 1.4, 2.4_
+
+  - [x] 3.3 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Checkout Returns Descriptive Errors
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - Verify:
+      - Checkout API returns appropriate error codes (not 502) on timeout/network errors
+      - Error messages are descriptive and helpful
+      - Logs contain diagnostic information
+    - _Requirements: 2.4_
+
+  - [x] 3.4 Verify preservation tests still pass
+    - **Property 2: Preservation** - Successful Checkout Flows Unchanged
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix:
+      - Successful checkout flows produce same results
+      - Cart clearing behavior unchanged
+      - Order and payment creation unchanged
+    - _Requirements: 3.3, 3.4, 3.5_
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run all tests (bug condition + preservation)
+  - Verify no regressions in existing functionality
+  - Test full checkout flow (add to cart, proceed to checkout, fill form, submit)
+  - Test error recovery flow (trigger timeout, verify descriptive error, retry)
+  - Ask the user if questions arise or manual testing is needed
