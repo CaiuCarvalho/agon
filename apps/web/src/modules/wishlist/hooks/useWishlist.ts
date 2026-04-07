@@ -125,9 +125,9 @@ export function useWishlist() {
       )
       .subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          console.log('[Wishlist] Realtime subscription established');
+          // Realtime subscription established
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          console.log('[Wishlist] Realtime subscription error:', status);
+          console.error('[Wishlist] Realtime subscription error:', status);
         }
       });
     

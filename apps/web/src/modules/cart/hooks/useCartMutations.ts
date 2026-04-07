@@ -103,11 +103,9 @@ export function useCartMutations() {
     },
     onSuccess: () => {
       toast.success('Produto adicionado ao carrinho');
-      console.log('[Cart] Item added successfully, invalidating cache');
     },
     onSettled: () => {
       // Refetch to ensure consistency with server
-      console.log('[Cart] Invalidating queries for user:', user?.id);
       queryClient.invalidateQueries({ queryKey: ['cart', user?.id] });
     },
   });

@@ -74,16 +74,13 @@ export function useCart() {
   const { data: items = [], isLoading, error } = useQuery({
     queryKey: ['cart', user?.id],
     queryFn: async () => {
-      console.log('[Cart] Fetching cart items for user:', user?.id);
       if (user) {
         // Authenticated: fetch from database
         const items = await cartService.getCartItems(user.id);
-        console.log('[Cart] Fetched items from database:', items.length);
         return items;
       } else {
         // Guest: fetch from localStorage
         const localCart = localStorageService.getCart();
-        console.log('[Cart] Fetched items from localStorage:', localCart.items.length);
         // Return items in CartItem format (without product details for now)
         return localCart.items.map(item => ({
           id: `local-${item.productId}-${item.size}`,

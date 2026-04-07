@@ -101,8 +101,6 @@ export function validateEnvironment(): void {
         'Only use NEXT_PUBLIC_* variables in client-side code.'
       );
     }
-
-    console.log('✅ Client environment variables validated successfully');
   } else {
     // SERVER-SIDE: Validate all variables
     const serverEnv = {
@@ -122,7 +120,6 @@ export function validateEnvironment(): void {
       );
     }
 
-    console.log('✅ Server environment variables validated successfully');
   }
 }
 

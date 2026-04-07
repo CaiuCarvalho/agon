@@ -44,7 +44,6 @@ export function useMigrationStatus(): MigrationStatus {
     const checkAndRunMigration = async () => {
       // If no user, migration is complete (guest user, no migration needed)
       if (!user) {
-        console.log('[Migration] No user, marking as complete');
         setStatus('complete');
         return;
       }
@@ -52,18 +51,15 @@ export function useMigrationStatus(): MigrationStatus {
       // Check if migration has already been completed
       const migrated = localStorage.getItem(MIGRATION_FLAG_KEY);
       if (migrated === 'true') {
-        console.log('[Migration] Already migrated, marking as complete');
         setStatus('complete');
         return;
       }
 
       // User exists and not migrated - run migration
-      console.log('[Migration] Starting migration for user:', user.id);
       setStatus('in_progress');
 
       try {
         const result = await migrationService.migrateUserData(user.id);
-        console.log('[Migration] Migration result:', result);
 
         // Check if migration had errors
         if (result.errors.length > 0) {
@@ -80,7 +76,6 @@ export function useMigrationStatus(): MigrationStatus {
           }
         } else {
           // Success - mark as migrated
-          console.log('[Migration] Success, marking as complete');
           localStorage.setItem(MIGRATION_FLAG_KEY, 'true');
           setStatus('complete');
         }
