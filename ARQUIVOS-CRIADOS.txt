@@ -1,0 +1,92 @@
+========================================
+ARQUIVOS CRIADOS PARA DIAGNÓSTICO
+Erro 502 no Checkout - VPS
+========================================
+
+📚 DOCUMENTAÇÃO (Leitura)
+─────────────────────────────────────
+✓ RESUMO-EXECUTIVO.md          - Resumo super rápido (1 min)
+✓ LEIA-ME-PRIMEIRO.md           - Visão geral completa (5 min)
+✓ INICIO-AQUI.md                - Guia rápido visual (3 min)
+✓ README-DIAGNOSTICO-502.md     - Documentação completa (10 min)
+✓ GUIA-DIAGNOSTICO-VPS.md       - Troubleshooting detalhado (15 min)
+✓ INDICE-ARQUIVOS.md            - Índice de todos os arquivos (5 min)
+✓ ARQUIVOS-CRIADOS.txt          - Este arquivo (1 min)
+
+🔧 SCRIPTS BASH (Executáveis)
+─────────────────────────────────────
+✓ upload-to-vps.sh              - Upload automático para VPS
+✓ configure-env-vps.sh          - Configuração interativa de variáveis
+✓ COMANDOS-RAPIDOS-VPS.sh       - Comandos úteis (diagnostic, rebuild, logs)
+
+🔍 SCRIPTS NODE.JS (Diagnóstico)
+─────────────────────────────────────
+✓ diagnose-vps-env.js           - Diagnóstico completo de variáveis
+✓ test-mercadopago-vps.js       - Teste de integração com Mercado Pago
+
+========================================
+COMO USAR
+========================================
+
+1️⃣ LEIA PRIMEIRO
+   - RESUMO-EXECUTIVO.md (1 min)
+   ou
+   - LEIA-ME-PRIMEIRO.md (5 min)
+
+2️⃣ UPLOAD PARA VPS (na sua máquina local)
+   bash upload-to-vps.sh user@vps-ip /path/to/app
+
+3️⃣ CONFIGURAR (na VPS)
+   bash configure-env-vps.sh
+
+4️⃣ REBUILD (na VPS)
+   bash COMANDOS-RAPIDOS-VPS.sh rebuild
+
+5️⃣ TESTAR
+   Acesse: https://agonimports.com/cart
+
+========================================
+TEMPO TOTAL: ~10 minutos
+========================================
+
+📊 CHECKLIST
+─────────────────────────────────────
+[ ] Leu RESUMO-EXECUTIVO.md ou LEIA-ME-PRIMEIRO.md
+[ ] Fez upload dos arquivos para VPS
+[ ] Executou configure-env-vps.sh
+[ ] Executou diagnóstico (passou sem erros)
+[ ] Executou rebuild
+[ ] Testou checkout (funciona sem 502)
+
+✅ SUCESSO!
+
+========================================
+PRECISA DE AJUDA?
+========================================
+
+Se erro persistir, execute na VPS:
+  bash COMANDOS-RAPIDOS-VPS.sh diagnostic > diagnostic.txt
+  bash COMANDOS-RAPIDOS-VPS.sh test-mp > test-mp.txt
+  bash COMANDOS-RAPIDOS-VPS.sh logs > logs.txt
+
+Compartilhe os arquivos gerados.
+
+========================================
+LINKS ÚTEIS
+========================================
+
+Mercado Pago Credenciais:
+  https://www.mercadopago.com.br/developers/panel/credentials
+
+Mercado Pago Documentação:
+  https://www.mercadopago.com.br/developers/pt/docs
+
+Supabase Dashboard:
+  https://app.supabase.com
+
+PM2 Documentação:
+  https://pm2.keymetrics.io/docs/usage/quick-start/
+
+========================================
+FIM
+========================================
