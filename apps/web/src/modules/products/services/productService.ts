@@ -132,10 +132,40 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
   const to = from + limit - 1;
   query = query.range(from, to);
 
-  const { data, error, count } = await query;
+  // Wrap query with timeout to prevent infinite loading
+  const queryPromise = query;
+  const timeoutPromise = new Promise<never>((_, reject) => 
+    setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+  );
+
+  let data, error, count;
+  try {
+    const result = await Promise.race([queryPromise, timeoutPromise]);
+    data = result.data;
+    error = result.error;
+    count = result.count;
+  } catch (timeoutError: any) {
+    console.error('[getProducts] Query timeout:', {
+      filters,
+      error: timeoutError?.message,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    });
+    throw timeoutError;
+  }
 
   if (error) {
+    console.error('[getProducts] Supabase error:', {
+      filters,
+      error: error.message,
+      code: error.code,
+    });
     throw new Error(`Failed to fetch products: ${error.message}`);
+  }
+
+  // CRITICAL: Check for silent failure (data is null but no error)
+  if (!data) {
+    console.error('[getProducts] Silent failure: data is null but no error', { filters });
+    throw new Error('Failed to fetch products: No data returned');
   }
 
   return {
@@ -205,16 +235,38 @@ async function getProductsWithSearch(filters: ProductFilters): Promise<Paginated
   nameQuery = applyFilters(nameQuery);
   descQuery = applyFilters(descQuery);
 
-  // Execute both queries
-  const [nameResults, descResults] = await Promise.all([
-    nameQuery,
-    descQuery,
-  ]);
+  // Wrap queries with timeout to prevent infinite loading
+  const queriesPromise = Promise.all([nameQuery, descQuery]);
+  const timeoutPromise = new Promise<never>((_, reject) => 
+    setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+  );
+
+  let nameResults, descResults;
+  try {
+    [nameResults, descResults] = await Promise.race([queriesPromise, timeoutPromise]);
+  } catch (timeoutError: any) {
+    console.error('[getProductsWithSearch] Query timeout:', {
+      filters,
+      error: timeoutError?.message,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+    });
+    throw timeoutError;
+  }
 
   if (nameResults.error) {
+    console.error('[getProductsWithSearch] Name search error:', {
+      filters,
+      error: nameResults.error.message,
+      code: nameResults.error.code,
+    });
     throw new Error(`Failed to search products: ${nameResults.error.message}`);
   }
   if (descResults.error) {
+    console.error('[getProductsWithSearch] Description search error:', {
+      filters,
+      error: descResults.error.message,
+      code: descResults.error.code,
+    });
     throw new Error(`Failed to search products: ${descResults.error.message}`);
   }
 

@@ -29,7 +29,7 @@ export default function Home() {
   const yPos = useTransform(scrollYProgress, [0, 1], ["-20%", "20%"]);
 
   // Buscar produtos reais do banco
-  const { data: productsData, isLoading: isLoadingProducts } = useProducts({ 
+  const { data: productsData, isLoading: isLoadingProducts, error } = useProducts({ 
     limit: 4,
     sortBy: 'latest'
   });
@@ -76,6 +76,17 @@ export default function Home() {
           {isLoadingProducts ? (
             <div className="flex items-center justify-center py-20">
               <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-20 gap-4">
+              <p className="text-destructive text-lg">Erro ao carregar produtos</p>
+              <p className="text-muted-foreground text-sm">{error.message}</p>
+              <button 
+                onClick={() => window.location.reload()}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors"
+              >
+                Tentar Novamente
+              </button>
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
