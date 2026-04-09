@@ -55,9 +55,9 @@ export function ProductTable({ showDeleted = false }: ProductTableProps) {
 
   // Filter products based on showDeletedProducts toggle
   // data is PaginatedProducts which has a products array
-  const displayedProducts = data?.products?.filter((product) =>
+  const displayedProducts = (data?.products || []).filter((product) =>
     showDeletedProducts ? product.deletedAt !== null : product.deletedAt === null
-  ) || [];
+  );
 
   const handleCreateProduct = async (values: ProductFormValues) => {
     await createProduct.mutateAsync(values);
