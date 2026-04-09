@@ -68,7 +68,7 @@ export function useCart() {
   // Realtime reconnection state
   const reconnectAttempts = useRef(0);
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
-  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected'>('disconnected');
+  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'idle'>('idle');
   
   // Fetch cart items (blocked until migration completes or errors)
   const { data: items = [], isLoading, error } = useQuery({
@@ -101,7 +101,17 @@ export function useCart() {
   
   // Subscribe to Realtime updates (authenticated users only)
   useEffect(() => {
-    if (!user || (migrationStatus !== 'complete' && migrationStatus !== 'error')) return;
+    // Set idle status for guest users
+    if (!user) {
+      setRealtimeStatus('idle');
+      return;
+    }
+    
+    // Set idle status during migration
+    if (migrationStatus !== 'complete' && migrationStatus !== 'error') {
+      setRealtimeStatus('idle');
+      return;
+    }
     
     const supabase = createClient();
     
@@ -189,6 +199,9 @@ export function useCart() {
    */
   const startPolling = () => {
     if (pollingInterval.current || !user) return;
+    
+    // Set idle status when using polling fallback
+    setRealtimeStatus('idle');
     
     pollingInterval.current = setInterval(() => {
       queryClient.invalidateQueries({ queryKey: ['cart', user.id] });

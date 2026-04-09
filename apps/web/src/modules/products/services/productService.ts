@@ -79,16 +79,23 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
     limit = 20,
   } = filters;
 
+  // Enforce LIMIT to prevent unbounded queries (max 100)
+  const effectiveLimit = Math.min(limit || 20, 100);
+
   // If search is provided, we need to use a different approach
   // because we need to search both name AND description with full-text search
   if (search && search.trim()) {
-    return await getProductsWithSearch(filters);
+    return await getProductsWithSearch({ ...filters, limit: effectiveLimit });
   }
 
-  // Start building query with category join (no search)
+  // Start building query with explicit field selection (no SELECT *)
+  // This reduces data transfer and improves performance
   let query = supabase
     .from('products')
-    .select('*, category:categories(*)', { count: 'exact' })
+    .select(
+      'id, name, description, price, category_id, image_url, stock, features, rating, reviews, created_at, updated_at, deleted_at, category:categories(id, name, slug, description, created_at, updated_at)',
+      { count: 'exact' }
+    )
     .is('deleted_at', null);
 
   // Apply category filter
@@ -127,30 +134,65 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
       query = query.order('created_at', { ascending: false });
   }
 
-  // Apply pagination
-  const from = (page - 1) * limit;
-  const to = from + limit - 1;
+  // Apply pagination with effective limit
+  const from = (page - 1) * effectiveLimit;
+  const to = from + effectiveLimit - 1;
   query = query.range(from, to);
 
-  // Wrap query with timeout to prevent infinite loading
+  // Wrap query with timeout to prevent infinite loading (increased to 15s for cold start)
+  const startTime = Date.now();
   const queryPromise = query;
   const timeoutPromise = new Promise<never>((_, reject) => 
-    setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+    setTimeout(() => reject(new Error('Query timeout after 15 seconds')), 15000)
   );
 
   let data, error, count;
+  let retryAttempted = false;
+  
   try {
     const result = await Promise.race([queryPromise, timeoutPromise]);
     data = result.data;
     error = result.error;
     count = result.count;
+    
+    const queryTime = Date.now() - startTime;
+    console.log(`[getProducts] Query completed in ${queryTime}ms`, {
+      filters: { ...filters, limit: effectiveLimit },
+      isColdStart: queryTime > 5000,
+    });
   } catch (timeoutError: any) {
+    const queryTime = Date.now() - startTime;
+    
+    // Log timeout with context
     console.error('[getProducts] Query timeout:', {
-      filters,
+      filters: { ...filters, limit: effectiveLimit },
+      queryTime,
       error: timeoutError?.message,
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      isColdStart: true,
     });
-    throw timeoutError;
+    
+    // Retry once on timeout (cold start mitigation)
+    if (!retryAttempted) {
+      retryAttempted = true;
+      console.log('[getProducts] Retrying query after timeout...');
+      
+      try {
+        const retryStartTime = Date.now();
+        const retryResult = await query;
+        data = retryResult.data;
+        error = retryResult.error;
+        count = retryResult.count;
+        
+        const retryTime = Date.now() - retryStartTime;
+        console.log(`[getProducts] Retry succeeded in ${retryTime}ms`);
+      } catch (retryError: any) {
+        console.error('[getProducts] Retry failed:', retryError?.message);
+        throw timeoutError; // Throw original timeout error
+      }
+    } else {
+      throw timeoutError;
+    }
   }
 
   if (error) {
@@ -172,8 +214,8 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
     products: (data || []).map(transformProductRow),
     total: count || 0,
     page,
-    limit,
-    totalPages: Math.ceil((count || 0) / limit),
+    limit: effectiveLimit,
+    totalPages: Math.ceil((count || 0) / effectiveLimit),
   };
 }
 
@@ -199,19 +241,26 @@ async function getProductsWithSearch(filters: ProductFilters): Promise<Paginated
     limit = 20,
   } = filters;
 
+  // Enforce LIMIT to prevent unbounded queries (max 100)
+  const effectiveLimit = Math.min(limit || 20, 100);
   const searchTerm = search!.trim();
 
-  // Build the full-text search query using textSearch
-  // We'll search name first, then merge with description search
+  // Build the full-text search query using textSearch with explicit field selection
   let nameQuery = supabase
     .from('products')
-    .select('*, category:categories(*)', { count: 'exact' })
+    .select(
+      'id, name, description, price, category_id, image_url, stock, features, rating, reviews, created_at, updated_at, deleted_at, category:categories(id, name, slug, description, created_at, updated_at)',
+      { count: 'exact' }
+    )
     .is('deleted_at', null)
     .textSearch('name', searchTerm, { type: 'plain', config: 'portuguese' });
 
   let descQuery = supabase
     .from('products')
-    .select('*, category:categories(*)', { count: 'exact' })
+    .select(
+      'id, name, description, price, category_id, image_url, stock, features, rating, reviews, created_at, updated_at, deleted_at, category:categories(id, name, slug, description, created_at, updated_at)',
+      { count: 'exact' }
+    )
     .is('deleted_at', null)
     .textSearch('description', searchTerm, { type: 'plain', config: 'portuguese' });
 
@@ -235,22 +284,54 @@ async function getProductsWithSearch(filters: ProductFilters): Promise<Paginated
   nameQuery = applyFilters(nameQuery);
   descQuery = applyFilters(descQuery);
 
-  // Wrap queries with timeout to prevent infinite loading
+  // Wrap queries with timeout to prevent infinite loading (increased to 15s for cold start)
+  const startTime = Date.now();
   const queriesPromise = Promise.all([nameQuery, descQuery]);
   const timeoutPromise = new Promise<never>((_, reject) => 
-    setTimeout(() => reject(new Error('Query timeout after 10 seconds')), 10000)
+    setTimeout(() => reject(new Error('Query timeout after 15 seconds')), 15000)
   );
 
   let nameResults, descResults;
+  let retryAttempted = false;
+  
   try {
     [nameResults, descResults] = await Promise.race([queriesPromise, timeoutPromise]);
+    
+    const queryTime = Date.now() - startTime;
+    console.log(`[getProductsWithSearch] Query completed in ${queryTime}ms`, {
+      filters: { ...filters, limit: effectiveLimit },
+      isColdStart: queryTime > 5000,
+    });
   } catch (timeoutError: any) {
+    const queryTime = Date.now() - startTime;
+    
+    // Log timeout with context
     console.error('[getProductsWithSearch] Query timeout:', {
-      filters,
+      filters: { ...filters, limit: effectiveLimit },
+      queryTime,
       error: timeoutError?.message,
       supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      isColdStart: true,
     });
-    throw timeoutError;
+    
+    // Retry once on timeout (cold start mitigation)
+    if (!retryAttempted) {
+      retryAttempted = true;
+      console.log('[getProductsWithSearch] Retrying query after timeout...');
+      
+      try {
+        const retryStartTime = Date.now();
+        [nameResults, descResults] = await Promise.all([nameQuery, descQuery]);
+        
+        const retryTime = Date.now() - retryStartTime;
+        console.log(`[getProductsWithSearch] Retry succeeded in ${retryTime}ms`);
+      } catch (retryError: any) {
+        console.error('[getProductsWithSearch] Retry failed:', retryError?.message);
+        throw timeoutError; // Throw original timeout error
+      }
+    } else {
+      throw timeoutError;
+    }
   }
 
   if (nameResults.error) {
@@ -292,18 +373,18 @@ async function getProductsWithSearch(filters: ProductFilters): Promise<Paginated
     }
   });
 
-  // Apply pagination
+  // Apply pagination with effective limit
   const total = uniqueProducts.length;
-  const from = (page - 1) * limit;
-  const to = from + limit;
+  const from = (page - 1) * effectiveLimit;
+  const to = from + effectiveLimit;
   const paginatedProducts = uniqueProducts.slice(from, to);
 
   return {
     products: paginatedProducts.map(transformProductRow),
     total,
     page,
-    limit,
-    totalPages: Math.ceil(total / limit),
+    limit: effectiveLimit,
+    totalPages: Math.ceil(total / effectiveLimit),
   };
 }
 

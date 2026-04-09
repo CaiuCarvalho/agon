@@ -65,6 +65,11 @@ export function RealtimeStatus() {
 export function ConnectionIndicator() {
   const { realtimeStatus } = useCart();
 
+  // Don't show indicator for idle state (not applicable)
+  if (realtimeStatus === 'idle') {
+    return null;
+  }
+
   if (realtimeStatus === 'connected') {
     return (
       <div className="flex items-center gap-1.5 text-xs text-green-600">

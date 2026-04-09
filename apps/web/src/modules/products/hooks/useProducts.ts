@@ -35,6 +35,13 @@ export function useProducts(filters: ProductFilters = {}) {
   return useQuery<PaginatedProducts, Error>({
     queryKey: ['products', filters],
     queryFn: () => getProducts(filters),
+    // Retry configuration for resilience
+    retry: 2, // Retry up to 2 times on error
+    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff (1s, 2s, max 30s)
+    // Cache configuration
+    staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh longer, reduces refetches
+    // Keep previous data during refetch (better UX for pagination)
+    keepPreviousData: true,
   });
 }
 
