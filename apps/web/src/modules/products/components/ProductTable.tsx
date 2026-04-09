@@ -54,7 +54,8 @@ export function ProductTable({ showDeleted = false }: ProductTableProps) {
   } = useProductMutations();
 
   // Filter products based on showDeletedProducts toggle
-  const displayedProducts = data?.products.filter((product) =>
+  // data is PaginatedProducts which has a products array
+  const displayedProducts = data?.products?.filter((product) =>
     showDeletedProducts ? product.deletedAt !== null : product.deletedAt === null
   ) || [];
 
