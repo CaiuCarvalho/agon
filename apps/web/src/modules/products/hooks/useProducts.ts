@@ -1,6 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { getProducts, getProductById } from '../services/productService';
 import type { ProductFilters, PaginatedProducts, Product } from '../types';
 
@@ -31,7 +31,7 @@ import type { ProductFilters, PaginatedProducts, Product } from '../types';
  * });
  * ```
  */
-export function useProducts(filters: ProductFilters = {}) {
+export function useProducts(filters: ProductFilters = {}): UseQueryResult<PaginatedProducts, Error> {
   return useQuery<PaginatedProducts, Error>({
     queryKey: ['products', filters],
     queryFn: () => getProducts(filters),
@@ -40,8 +40,8 @@ export function useProducts(filters: ProductFilters = {}) {
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff (1s, 2s, max 30s)
     // Cache configuration
     staleTime: 5 * 60 * 1000, // 5 minutes - data stays fresh longer, reduces refetches
-    // Keep previous data during refetch (better UX for pagination)
-    keepPreviousData: true,
+    // Keep previous data during refetch (better UX for pagination) - React Query v5 uses placeholderData
+    placeholderData: (previousData) => previousData,
   });
 }
 
@@ -68,7 +68,7 @@ export function useProducts(filters: ProductFilters = {}) {
  * return <ProductDetail product={product} />;
  * ```
  */
-export function useProduct(id?: string) {
+export function useProduct(id?: string): UseQueryResult<Product | null, Error> {
   return useQuery<Product | null, Error>({
     queryKey: ['products', id],
     queryFn: () => getProductById(id!),

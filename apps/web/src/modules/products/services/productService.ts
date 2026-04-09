@@ -25,19 +25,47 @@ import type {
  */
 
 /**
+ * Database row structure from Supabase query
+ * Matches the exact structure returned by Supabase with joined category data
+ */
+interface DatabaseProductRow {
+  id: string;
+  name: string;
+  description: string;
+  price: string | number;
+  category_id: string;
+  image_url: string;
+  stock: number;
+  features: string[];
+  rating: string | number;
+  reviews: number;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+  category?: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    created_at: string;
+    updated_at: string;
+  };
+}
+
+/**
  * Transform database row (snake_case) to Product interface (camelCase)
  */
-function transformProductRow(row: any): Product {
+function transformProductRow(row: DatabaseProductRow): Product {
   return {
     id: row.id,
     name: row.name,
     description: row.description,
-    price: parseFloat(row.price),
+    price: typeof row.price === 'number' ? row.price : parseFloat(row.price),
     categoryId: row.category_id,
     imageUrl: row.image_url,
     stock: row.stock,
     features: row.features || [],
-    rating: parseFloat(row.rating || 0),
+    rating: typeof row.rating === 'number' ? row.rating : parseFloat(row.rating || '0'),
     reviews: row.reviews || 0,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
