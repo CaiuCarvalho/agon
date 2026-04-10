@@ -1,1 +1,5 @@
-export default function Page() { return <div>Clean Page</div>; }
+import { DashboardPage } from '@/modules/admin/components/Dashboard/DashboardPage';
+
+export default function AdminDashboard() {
+  return <DashboardPage />;
+}

@@ -1,0 +1,101 @@
+// Admin Authentication Service
+// Provides admin validation middleware and authentication utilities
+
+import { NextRequest } from 'next/server';
+import { createClient } from '@/lib/supabase/server';
+import type { AdminUser, ApiError } from '../types';
+
+/**
+ * Validates if the current user is an admin with proper permissions
+ * 
+ * Security layers:
+ * 1. Check authentication (user must be logged in)
+ * 2. Check role (user.role must be 'admin')
+ * 3. Check whitelist (user.email must be in ADMIN_EMAIL_PRIMARY or ADMIN_EMAIL_BACKUP)
+ * 
+ * @param req - Next.js request object
+ * @returns AdminUser if valid, ApiError if invalid
+ */
+export async function validateAdmin(req: NextRequest): Promise<AdminUser | ApiError> {
+  const supabase = await createClient();
+  
+  // Check authentication
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) {
+    return {
+      code: 'UNAUTHORIZED',
+      message: 'Authentication required',
+    };
+  }
+  
+  // Check role in profiles table
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+  
+  if (profileError || !profile) {
+    console.log('[SECURITY] Profile not found:', {
+      timestamp: new Date().toISOString(),
+      user_email: user.email,
+      endpoint: req.url,
+      action: 'profile_not_found',
+    });
+    
+    return {
+      code: 'FORBIDDEN',
+      message: 'Access denied',
+    };
+  }
+  
+  if (profile.role !== 'admin') {
+    console.log('[SECURITY] Non-admin access attempt:', {
+      timestamp: new Date().toISOString(),
+      user_email: user.email,
+      endpoint: req.url,
+      action: 'non_admin_access_attempt',
+      role: profile.role,
+    });
+    
+    return {
+      code: 'FORBIDDEN',
+      message: 'Admin access required',
+    };
+  }
+  
+  // Check whitelist
+  const whitelist = [
+    process.env.ADMIN_EMAIL_PRIMARY,
+    process.env.ADMIN_EMAIL_BACKUP,
+  ].filter(Boolean);
+  
+  if (!whitelist.includes(user.email)) {
+    console.log('[SECURITY] Email not in whitelist:', {
+      timestamp: new Date().toISOString(),
+      user_email: user.email,
+      endpoint: req.url,
+      action: 'email_not_in_whitelist',
+    });
+    
+    return {
+      code: 'FORBIDDEN',
+      message: 'Access denied',
+    };
+  }
+  
+  // All checks passed - return admin user
+  return {
+    id: user.id,
+    email: user.email!,
+    role: 'admin',
+  };
+}
+
+/**
+ * Helper to check if a result is an error
+ */
+export function isApiError(result: AdminUser | ApiError): result is ApiError {
+  return 'code' in result && 'message' in result;
+}

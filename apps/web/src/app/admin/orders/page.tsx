@@ -1,1 +1,5 @@
-export default function Page() { return <div>Clean Page</div>; }
+import { OrdersPage } from '@/modules/admin/components/Orders/OrdersPage';
+
+export default function AdminOrdersRoute() {
+  return <OrdersPage />;
+}

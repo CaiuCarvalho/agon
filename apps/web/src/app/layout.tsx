@@ -49,11 +49,7 @@ export default function RootLayout({
             <GoogleAnalytics />
             <MigrationProgress />
             <RealtimeStatus />
-            <Navbar />
-            <main className="min-h-screen">
-              {children}
-            </main>
-            <Footer />
+            {children}
             <Toaster />
             <Sonner />
           </QueryProvider>

@@ -16,9 +16,10 @@ export async function POST(request: NextRequest) {
     // 1. Extract headers
     const signature = request.headers.get('x-signature');
     const requestId = request.headers.get('x-request-id');
+    const correlationId = requestId; // Use request ID as correlation ID for tracing
     
     if (!signature || !requestId) {
-      console.error('Missing required headers');
+      console.error('[Webhook] Missing required headers', { correlationId });
       return NextResponse.json(
         { error: 'Missing required headers' },
         { status: 400 }
@@ -29,23 +30,24 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { data, type } = body;
     
-    // Log webhook received
-    console.log('Webhook received:', {
+    // Log webhook received with correlation ID
+    console.log('[Webhook] Received:', {
       type,
       dataId: data?.id,
       requestId,
+      correlationId,
       timestamp: new Date().toISOString(),
     });
     
     // 3. Ignore non-payment notifications
     if (type !== 'payment') {
-      console.log('Ignoring non-payment notification:', type);
+      console.log('[Webhook] Ignoring non-payment notification:', { type, correlationId });
       return NextResponse.json({ received: true }, { status: 200 });
     }
     
     const paymentId = data?.id;
     if (!paymentId) {
-      console.error('Missing payment ID in webhook data');
+      console.error('[Webhook] Missing payment ID', { correlationId });
       return NextResponse.json(
         { error: 'Missing payment ID' },
         { status: 400 }
@@ -61,7 +63,7 @@ export async function POST(request: NextRequest) {
         paymentId
       );
     } catch (error) {
-      console.error('Signature validation error:', error);
+      console.error('[Webhook] Signature validation error:', { error, correlationId });
       return NextResponse.json(
         { error: 'Signature validation failed' },
         { status: 401 }
@@ -69,32 +71,33 @@ export async function POST(request: NextRequest) {
     }
     
     if (!isValidSignature) {
-      console.error('Invalid webhook signature');
+      console.error('[Webhook] Invalid signature', { correlationId });
       return NextResponse.json(
         { error: 'Invalid signature' },
         { status: 401 }
       );
     }
     
-    console.log('Webhook signature validated successfully');
+    console.log('[Webhook] Signature validated', { correlationId });
     
     // 5. Fetch payment details from Mercado Pago
     let paymentDetails;
     try {
       paymentDetails = await mercadoPagoService.getPaymentDetails(paymentId);
     } catch (error: any) {
-      console.error('Failed to fetch payment details:', error);
+      console.error('[Webhook] Failed to fetch payment details:', { error, correlationId });
       return NextResponse.json(
         { error: 'Failed to fetch payment details' },
         { status: 500 }
       );
     }
     
-    console.log('Payment details fetched:', {
+    console.log('[Webhook] Payment details fetched:', {
       paymentId: paymentDetails.id,
       status: paymentDetails.status,
       paymentMethod: paymentDetails.payment_method_id,
       externalReference: paymentDetails.external_reference,
+      correlationId,
     });
     
     // 6. Find payment in database by external_reference (order_id)
@@ -106,7 +109,10 @@ export async function POST(request: NextRequest) {
       .single();
     
     if (paymentError || !payment) {
-      console.error('Payment not found in database:', paymentDetails.external_reference);
+      console.error('[Webhook] Payment not found in database:', {
+        externalReference: paymentDetails.external_reference,
+        correlationId,
+      });
       return NextResponse.json(
         { error: 'Payment not found' },
         { status: 404 }
@@ -115,7 +121,14 @@ export async function POST(request: NextRequest) {
     
     // 7. Check if already processed (idempotency)
     if (payment.status === paymentDetails.status) {
-      console.log('Payment already processed with same status, skipping update');
+      console.log('[Webhook] Idempotency check: Status unchanged, skipping update', {
+        paymentId: payment.id,
+        orderId: payment.order_id,
+        status: payment.status,
+        action: 'skipped',
+        correlationId,
+        timestamp: new Date().toISOString(),
+      });
       return NextResponse.json({ received: true, skipped: true }, { status: 200 });
     }
     
@@ -127,12 +140,15 @@ export async function POST(request: NextRequest) {
         paymentDetails.payment_method_id
       );
       
-      console.log('Payment status updated:', {
+      console.log('[Webhook] Payment status updated:', {
         paymentId: result.paymentId,
         orderId: result.orderId,
         oldStatus: result.oldStatus,
         newStatus: result.newStatus,
         orderStatus: result.orderStatus,
+        action: 'updated',
+        correlationId,
+        timestamp: new Date().toISOString(),
       });
       
       return NextResponse.json(
@@ -141,7 +157,12 @@ export async function POST(request: NextRequest) {
       );
       
     } catch (error: any) {
-      console.error('Failed to update payment status:', error);
+      console.error('[Webhook] Failed to update payment status:', {
+        error,
+        paymentId: payment.id,
+        orderId: payment.order_id,
+        correlationId,
+      });
       
       // Return 500 so Mercado Pago retries
       return NextResponse.json(
@@ -151,7 +172,7 @@ export async function POST(request: NextRequest) {
     }
     
   } catch (error: any) {
-    console.error('Unexpected error in webhook:', error);
+    console.error('[Webhook] Unexpected error:', error);
     
     // Return 500 so Mercado Pago retries
     return NextResponse.json(

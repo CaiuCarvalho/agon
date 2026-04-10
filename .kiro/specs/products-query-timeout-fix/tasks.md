@@ -1,0 +1,152 @@
+# Implementation Plan
+
+- [x] 1. Write bug condition exploration test
+  - **Property 1: Bug Condition** - Query Performance on Cold Start
+  - **CRITICAL**: This test MUST FAIL on unfixed code - failure confirms the bug exists
+  - **DO NOT attempt to fix the test or the code when it fails**
+  - **NOTE**: This test encodes the expected behavior - it will validate the fix when it passes after implementation
+  - **GOAL**: Surface counterexamples that demonstrate the bug exists
+  - **Scoped PBT Approach**: For deterministic bugs, scope the property to the concrete failing case(s) to ensure reproducibility
+  - Test that `getProducts({ limit: 4, sortBy: 'latest' })` completes in < 2s on cold start
+  - Test that `getProducts({ search: 'brasil' })` completes in < 2s on cold start with full-text search
+  - Test that `EXPLAIN ANALYZE` shows Index Scans (not Seq Scans) after optimization
+  - Run test on UNFIXED code
+  - **EXPECTED OUTCOME**: Test FAILS (this is correct - it proves the bug exists)
+  - Document counterexamples found: query times > 10s, Sequential Scans in EXPLAIN ANALYZE
+  - Mark task complete when test is written, run, and failure is documented
+  - _Requirements: 2.1, 2.2_
+
+- [x] 2. Write preservation property tests (BEFORE implementing fix)
+  - **Property 2: Preservation** - Existing Functionality
+  - **IMPORTANT**: Follow observation-first methodology
+  - Observe behavior on UNFIXED code for non-buggy inputs (warm requests, cached queries)
+  - Write property-based tests capturing observed behavior patterns from Preservation Requirements
+  - Test filter preservation: search, categoryId, minPrice, maxPrice, minRating produce same results
+  - Test pagination preservation: page, limit, offset calculation produces same results
+  - Test sorting preservation: sortBy (latest, oldest, price_asc, price_desc) produces same order
+  - Test data transformation preservation: snake_case → camelCase via transformProductRow
+  - Test full-text search preservation: to_tsvector('portuguese') in name and description
+  - Test soft-delete preservation: deleted_at IS NULL excludes soft-deleted products
+  - Property-based testing generates many test cases for stronger guarantees
+  - Run tests on UNFIXED code
+  - **EXPECTED OUTCOME**: Tests PASS (this confirms baseline behavior to preserve)
+  - Mark task complete when tests are written, run, and passing on unfixed code
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5, 3.6, 3.7, 3.8_
+
+- [x] 3. Fix for products query timeout
+
+  - [x] 3.1 Root cause validation (diagnóstico)
+    - Execute `EXPLAIN ANALYZE` on production query to confirm Sequential Scans
+    - Verify absence of indexes on category_id, price, rating, created_at, deleted_at
+    - Verify absence of GIN index for full-text search
+    - Document findings: which indexes are missing, which queries use Seq Scan
+    - _Bug_Condition: isBugCondition(input) where input.isColdStart = true AND input.queryTime > 10000_
+    - _Expected_Behavior: Query completes in < 2s on cold start with Index Scans_
+    - _Preservation: All filters, pagination, sorting, transformations remain unchanged_
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.2 Database optimization (índices)
+    - Create migration file: `supabase/migrations/20260408000001_optimize_products_query_performance.sql`
+    - Add index on category_id: `CREATE INDEX idx_products_category_id ON products(category_id) WHERE deleted_at IS NULL;`
+    - Add index on price: `CREATE INDEX idx_products_price ON products(price) WHERE deleted_at IS NULL;`
+    - Add index on rating: `CREATE INDEX idx_products_rating ON products(rating) WHERE deleted_at IS NULL;`
+    - Add index on created_at: `CREATE INDEX idx_products_created_at ON products(created_at DESC) WHERE deleted_at IS NULL;`
+    - Add index on deleted_at: `CREATE INDEX idx_products_deleted_at ON products(deleted_at) WHERE deleted_at IS NULL;`
+    - Add GIN index for full-text search: `CREATE INDEX idx_products_fts ON products USING GIN (to_tsvector('portuguese', name || ' ' || description)) WHERE deleted_at IS NULL;`
+    - Apply migration to production
+    - Verify indexes created: `\d products` in psql
+    - _Bug_Condition: isBugCondition(input) where Sequential Scans cause timeout_
+    - _Expected_Behavior: Index Scans reduce query time to < 2s_
+    - _Preservation: Indexes do not change query results, only performance_
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.3 Query optimization (remover SELECT *, LIMIT)
+    - In `apps/web/src/modules/products/services/productService.ts`
+    - Replace `select('*, category:categories(*)')` with explicit field selection
+    - Use: `select('id, name, description, price, category_id, image_url, stock, features, rating, reviews, created_at, updated_at, deleted_at, category:categories(id, name, slug, description, created_at, updated_at)')`
+    - Add LIMIT enforcement: `const effectiveLimit = Math.min(limit || 20, 100);`
+    - Apply effectiveLimit to query: `query.range(from, from + effectiveLimit - 1)`
+    - Update both `getProducts` and `getProductsWithSearch` functions
+    - _Bug_Condition: SELECT * transfers unnecessary data, increasing query time_
+    - _Expected_Behavior: Explicit field selection reduces data transfer, improving performance_
+    - _Preservation: Same fields returned, same data transformation_
+    - _Requirements: 2.1, 2.2, 3.1, 3.2, 3.3, 3.4_
+
+  - [x] 3.4 Cold start mitigation (prefetch server-side)
+    - In `apps/web/src/app/page.tsx`
+    - Convert Home component to Server Component (if not already)
+    - Add server-side data fetching: `const initialProducts = await getProducts({ limit: 4, sortBy: 'latest' });`
+    - Pass initialProducts as props to client component
+    - Update client component to use initialProducts as initialData for React Query
+    - This eliminates client-side cold start (server warms up the database)
+    - _Bug_Condition: Client-side cold start causes timeout_
+    - _Expected_Behavior: Server-side prefetch warms database before client renders_
+    - _Preservation: Same products displayed, same UI behavior_
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.5 Frontend resilience (React Query config)
+    - In `apps/web/src/modules/products/hooks/useProducts.ts`
+    - Add retry configuration: `retry: 2`
+    - Add retry delay with exponential backoff: `retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000)`
+    - Add staleTime: `staleTime: 5 * 60 * 1000` (5 minutes)
+    - Add keepPreviousData: `keepPreviousData: true`
+    - This provides automatic retry on timeout before showing error to user
+    - _Bug_Condition: Single timeout causes immediate error_
+    - _Expected_Behavior: Automatic retry gives second chance before error_
+    - _Preservation: Same caching behavior, same data freshness_
+    - _Requirements: 2.2, 2.3_
+
+  - [x] 3.6 Timeout handling
+    - In `apps/web/src/modules/products/services/productService.ts`
+    - Increase timeout from 10s to 15s: `setTimeout(() => reject(new Error('Query timeout after 15 seconds')), 15000)`
+    - Add retry logic in catch block: if timeout error, retry once before throwing
+    - Update both `getProducts` and `getProductsWithSearch` functions
+    - _Bug_Condition: 10s timeout too short for cold start_
+    - _Expected_Behavior: 15s timeout + retry accommodates cold start_
+    - _Preservation: Same error handling for non-timeout errors_
+    - _Requirements: 2.1, 2.2, 2.3_
+
+  - [x] 3.7 Observability (logs)
+    - In `apps/web/src/modules/products/services/productService.ts`
+    - Add query start timestamp: `const startTime = Date.now();`
+    - Add query completion log: `console.log('[getProducts] Query completed in ${Date.now() - startTime}ms');`
+    - Add cold start detection log: `console.log('[getProducts] Cold start detected, query may take longer');`
+    - Add timeout log with context: include filters, query time, Supabase URL
+    - Update both `getProducts` and `getProductsWithSearch` functions
+    - _Bug_Condition: Lack of observability makes diagnosis difficult_
+    - _Expected_Behavior: Logs provide query time, cold start indicator, timeout context_
+    - _Preservation: Logs do not affect functionality_
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.8 Verify bug condition exploration test now passes
+    - **Property 1: Expected Behavior** - Query Performance on Cold Start
+    - **IMPORTANT**: Re-run the SAME test from task 1 - do NOT write a new test
+    - The test from task 1 encodes the expected behavior
+    - When this test passes, it confirms the expected behavior is satisfied
+    - Run bug condition exploration test from step 1
+    - Verify `getProducts({ limit: 4, sortBy: 'latest' })` completes in < 2s on cold start
+    - Verify `getProducts({ search: 'brasil' })` completes in < 2s on cold start
+    - Verify `EXPLAIN ANALYZE` shows Index Scans (not Seq Scans)
+    - **EXPECTED OUTCOME**: Test PASSES (confirms bug is fixed)
+    - _Requirements: 2.1, 2.2_
+
+  - [x] 3.9 Verify preservation tests still pass
+    - **Property 2: Preservation** - Existing Functionality
+    - **IMPORTANT**: Re-run the SAME tests from task 2 - do NOT write new tests
+    - Run preservation property tests from step 2
+    - Verify filter preservation tests pass
+    - Verify pagination preservation tests pass
+    - Verify sorting preservation tests pass
+    - Verify data transformation preservation tests pass
+    - Verify full-text search preservation tests pass
+    - Verify soft-delete preservation tests pass
+    - **EXPECTED OUTCOME**: Tests PASS (confirms no regressions)
+    - Confirm all tests still pass after fix (no regressions)
+
+- [x] 4. Checkpoint - Ensure all tests pass
+  - Run all bug condition tests - verify they pass (query time < 2s)
+  - Run all preservation tests - verify they pass (no regressions)
+  - Run integration tests - verify end-to-end flow works
+  - Test in production environment - verify cold start performance
+  - Monitor logs - verify query times and cold start indicators
+  - Ensure all tests pass, ask the user if questions arise

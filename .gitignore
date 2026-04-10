@@ -40,5 +40,17 @@ Thumbs.db
 scripts/audit-results.json
 scripts/audit-report.md
 
+# Temporary files
+test-*.js
+diagnose-*.js
+*-temp.md
+*-backup.*
+*.backup
+npm-error.txt
+out-utf8.txt
+ts-out.txt
+tsc-errors.txt
+tsc-utf8.txt
+
 # TypeScript
 *.tsbuildinfo
