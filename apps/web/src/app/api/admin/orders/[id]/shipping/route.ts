@@ -8,8 +8,11 @@ import { shippingUpdateSchema } from '@/modules/admin/schemas';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  // Await params (Next.js 15 requirement)
+  const { id } = await params;
+  
   // Validate admin access
   const adminResult = await validateAdmin(req);
   
@@ -35,7 +38,7 @@ export async function PATCH(
   }
   
   // Update shipping
-  const result = await updateShipping(params.id, validation.data);
+  const result = await updateShipping(id, validation.data);
   
   if (!result.success) {
     // Map error codes to HTTP status codes

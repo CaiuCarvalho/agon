@@ -46,22 +46,10 @@ export const mercadoPagoService = {
     const client = getMercadoPagoClient();
     
     try {
-      console.log('Mercado Pago SDK: Creating preference with request:', {
-        itemsCount: request.items.length,
-        totalAmount: request.items.reduce((sum, item) => sum + (item.unit_price * item.quantity), 0),
-        payerEmail: request.payer.email,
-        externalReference: request.external_reference,
-      });
-      
       const preference = new Preference(client);
       
       // Attempt to create preference with retry logic
       const response = await this._createPreferenceWithRetry(preference, request);
-      
-      console.log('Mercado Pago SDK: Preference created:', {
-        id: response.id,
-        initPoint: response.init_point,
-      });
       
       return {
         id: response.id!,

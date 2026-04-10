@@ -8,8 +8,11 @@ import { productSchema } from '@/modules/admin/schemas';
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  // Await params (Next.js 15 requirement)
+  const { id } = await params;
+  
   // Validate admin access
   const adminResult = await validateAdmin(req);
   
@@ -35,7 +38,7 @@ export async function PUT(
   }
   
   // Update product
-  const result = await updateProduct(params.id, validation.data);
+  const result = await updateProduct(id, validation.data);
   
   if (!result.success) {
     return NextResponse.json(

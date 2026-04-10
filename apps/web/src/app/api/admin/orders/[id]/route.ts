@@ -7,8 +7,11 @@ import { getOrderDetails } from '@/modules/admin/services/orderService';
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  // Await params (Next.js 15 requirement)
+  const { id } = await params;
+  
   // Validate admin access
   const adminResult = await validateAdmin(req);
   
@@ -20,7 +23,7 @@ export async function GET(
   }
   
   // Fetch order details
-  const result = await getOrderDetails(params.id);
+  const result = await getOrderDetails(id);
   
   if (!result.success) {
     return NextResponse.json(

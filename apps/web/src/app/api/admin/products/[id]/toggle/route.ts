@@ -7,8 +7,11 @@ import { toggleProduct } from '@/modules/admin/services/productService';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  // Await params (Next.js 15 requirement)
+  const { id } = await params;
+  
   // Validate admin access
   const adminResult = await validateAdmin(req);
   
@@ -20,7 +23,7 @@ export async function PATCH(
   }
   
   // Toggle product
-  const result = await toggleProduct(params.id);
+  const result = await toggleProduct(id);
   
   if (!result.success) {
     return NextResponse.json(

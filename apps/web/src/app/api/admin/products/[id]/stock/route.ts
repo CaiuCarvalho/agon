@@ -8,8 +8,11 @@ import { stockUpdateSchema } from '@/modules/admin/schemas';
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  // Await params (Next.js 15 requirement)
+  const { id } = await params;
+  
   // Validate admin access
   const adminResult = await validateAdmin(req);
   
@@ -35,7 +38,7 @@ export async function PATCH(
   }
   
   // Update stock
-  const result = await updateStock(params.id, validation.data);
+  const result = await updateStock(id, validation.data);
   
   if (!result.success) {
     return NextResponse.json(
