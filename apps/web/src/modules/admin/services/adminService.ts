@@ -4,6 +4,7 @@
 import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import type { AdminUser, ApiError } from '../types';
+import { isAdminRole } from '@/lib/auth/roles';
 
 /**
  * Validates if the current user is an admin with proper permissions
@@ -36,7 +37,7 @@ export async function validateAdmin(req: NextRequest): Promise<AdminUser | ApiEr
     .eq('id', user.id)
     .single();
   
-  if (profileError || !profile) {
+  if (profileError && user.user_metadata?.role !== 'admin') {
     console.log('[SECURITY] Profile not found:', {
       timestamp: new Date().toISOString(),
       user_email: user.email,
@@ -50,13 +51,19 @@ export async function validateAdmin(req: NextRequest): Promise<AdminUser | ApiEr
     };
   }
   
-  if (profile.role !== 'admin') {
+  const isAdmin = isAdminRole({
+    profileRole: profile?.role,
+    metadataRole: user.user_metadata?.role,
+  });
+
+  if (!isAdmin) {
     console.log('[SECURITY] Non-admin access attempt:', {
       timestamp: new Date().toISOString(),
       user_email: user.email,
       endpoint: req.url,
       action: 'non_admin_access_attempt',
-      role: profile.role,
+      role: profile?.role,
+      metadata_role: user.user_metadata?.role,
     });
     
     return {

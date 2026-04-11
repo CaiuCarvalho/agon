@@ -24,7 +24,7 @@ export function OrderSummary({
   isSubmitting
 }: OrderSummaryProps) {
   const total = subtotal + shippingCost;
-  const freeShippingThreshold = 170;
+  const freeShippingThreshold = 200;
 
   return (
     <div className="lg:col-span-1 space-y-8 sticky top-28">
@@ -69,7 +69,7 @@ export function OrderSummary({
           {subtotal < freeShippingThreshold && (
              <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 transition-all">
               <p className="text-[9px] text-center text-primary font-black uppercase tracking-widest">
-                Faltam <span className="underline">{formatCurrency(freeShippingThreshold - subtotal)}</span> para o <span className="italic">Frete Grátis</span>!
+                Faltam <span className="underline">{formatCurrency(freeShippingThreshold - subtotal)}</span> para o <span className="italic">Frete Grátis acima de R$ 200</span>!
               </p>
             </div>
           )}

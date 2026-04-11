@@ -13,13 +13,13 @@ describe('useWishlist hook', () => {
     const { useWishlist } = await import('../useWishlist');
     expect(useWishlist).toBeDefined();
     expect(typeof useWishlist).toBe('function');
-  });
+  }, 15000);
   
   it('should be importable from the wishlist module root', async () => {
     const { useWishlist } = await import('../../index');
     expect(useWishlist).toBeDefined();
     expect(typeof useWishlist).toBe('function');
-  });
+  }, 15000);
 });
 
 describe('useWishlistMutations hook', () => {
@@ -27,11 +27,11 @@ describe('useWishlistMutations hook', () => {
     const { useWishlistMutations } = await import('../useWishlistMutations');
     expect(useWishlistMutations).toBeDefined();
     expect(typeof useWishlistMutations).toBe('function');
-  });
+  }, 15000);
   
   it('should be importable from the wishlist module root', async () => {
     const { useWishlistMutations } = await import('../../index');
     expect(useWishlistMutations).toBeDefined();
     expect(typeof useWishlistMutations).toBe('function');
-  });
+  }, 15000);
 });

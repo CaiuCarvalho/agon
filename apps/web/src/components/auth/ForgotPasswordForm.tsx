@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/form";
 import { toast } from "sonner";
 import { ForgotPasswordFormValues } from "@/types/form";
+import { buildApiUrl } from "@/lib/url";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("E-mail inválido."),
@@ -42,7 +43,7 @@ export function ForgotPasswordForm({ onSuccess, onBack }: ForgotPasswordFormProp
   async function onSubmit(data: ForgotPasswordValues) {
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/forgot-password`, {
+      const response = await fetch(buildApiUrl("/auth/forgot-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),

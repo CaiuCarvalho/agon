@@ -21,7 +21,12 @@
 -- ============================================================================
 
 -- Limpar produtos com estes nomes antes de inserir (evita duplicação)
-DELETE FROM products WHERE name IN ('Flamengo', 'Corinthians', 'Palmeiras', 'São Paulo', 'Brasil', 'Argentina', 'Real Madrid', 'Barcelona', 'PSG');
+DELETE FROM products WHERE name IN (
+  'Flamengo', 'Corinthians', 'Palmeiras', 'São Paulo', 
+  'Brasil', 'Argentina', 'Real Madrid', 'Barcelona', 'PSG',
+  'Santos', 'Grêmio', 'Internacional', 'Atlético Mineiro',
+  'Cruzeiro', 'Vasco', 'Botafogo'
+);
 
 -- ============================================================================
 -- 2. VERIFICAR CATEGORIAS EXISTENTES
@@ -155,6 +160,85 @@ VALUES
     ARRAY['Tecnologia Dri-FIT', 'Material respirável', 'Escudo bordado', 'Edição especial', 'Tamanhos P ao GG'],
     4.7,
     164
+  ),
+  
+  -- Mais Clubes Brasileiros (estoque variado)
+  (
+    'Santos',
+    'Camisa oficial do Santos Futebol Clube. Branco imaculado com detalhes pretos, tradição e história.',
+    289.90,
+    (SELECT id FROM categories WHERE slug = 'manto-oficial' LIMIT 1),
+    '/products/santos.jpg',
+    11,
+    ARRAY['Tecnologia Dri-FIT', 'Material respirável', 'Escudo bordado', 'Tamanhos P ao GG'],
+    4.7,
+    89
+  ),
+  (
+    'Grêmio',
+    'Camisa oficial do Grêmio Foot-Ball Porto Alegrense. Tricolor gaúcho com listras tradicionais.',
+    289.90,
+    (SELECT id FROM categories WHERE slug = 'manto-oficial' LIMIT 1),
+    '/products/gremio.jpg',
+    9,
+    ARRAY['Tecnologia Dri-FIT', 'Material respirável', 'Escudo bordado', 'Tamanhos P ao GG'],
+    4.8,
+    112
+  ),
+  (
+    'Internacional',
+    'Camisa oficial do Sport Club Internacional. Vermelho colorado com design moderno e elegante.',
+    289.90,
+    (SELECT id FROM categories WHERE slug = 'manto-oficial' LIMIT 1),
+    '/products/internacional.jpg',
+    10,
+    ARRAY['Tecnologia Dri-FIT', 'Material respirável', 'Escudo bordado', 'Tamanhos P ao GG'],
+    4.7,
+    95
+  ),
+  (
+    'Atlético Mineiro',
+    'Camisa oficial do Clube Atlético Mineiro. Preto e branco com design imponente do Galo.',
+    289.90,
+    (SELECT id FROM categories WHERE slug = 'manto-oficial' LIMIT 1),
+    '/products/atletico-mineiro.jpg',
+    13,
+    ARRAY['Tecnologia Dri-FIT', 'Material respirável', 'Escudo bordado', 'Tamanhos P ao GG'],
+    4.8,
+    134
+  ),
+  (
+    'Cruzeiro',
+    'Camisa oficial do Cruzeiro Esporte Clube. Azul celeste com estrelas que representam conquistas.',
+    279.90,
+    (SELECT id FROM categories WHERE slug = 'manto-oficial' LIMIT 1),
+    '/products/cruzeiro.jpg',
+    7,
+    ARRAY['Tecnologia Dri-FIT', 'Material respirável', 'Escudo bordado', 'Tamanhos P ao GG'],
+    4.6,
+    67
+  ),
+  (
+    'Vasco',
+    'Camisa oficial do Club de Regatas Vasco da Gama. Faixa diagonal preta sobre fundo branco.',
+    279.90,
+    (SELECT id FROM categories WHERE slug = 'manto-oficial' LIMIT 1),
+    '/products/vasco.jpg',
+    8,
+    ARRAY['Tecnologia Dri-FIT', 'Material respirável', 'Escudo bordado', 'Tamanhos P ao GG'],
+    4.6,
+    71
+  ),
+  (
+    'Botafogo',
+    'Camisa oficial do Botafogo de Futebol e Regatas. Listras alvinegras com tradição carioca.',
+    279.90,
+    (SELECT id FROM categories WHERE slug = 'manto-oficial' LIMIT 1),
+    '/products/botafogo.jpg',
+    9,
+    ARRAY['Tecnologia Dri-FIT', 'Material respirável', 'Escudo bordado', 'Tamanhos P ao GG'],
+    4.7,
+    82
   )
 ON CONFLICT (id) DO NOTHING;
 
@@ -172,7 +256,12 @@ SELECT
   reviews,
   created_at
 FROM products
-WHERE name IN ('Flamengo', 'Corinthians', 'Palmeiras', 'São Paulo', 'Brasil', 'Argentina', 'Real Madrid', 'Barcelona', 'PSG')
+WHERE name IN (
+  'Flamengo', 'Corinthians', 'Palmeiras', 'São Paulo', 
+  'Brasil', 'Argentina', 'Real Madrid', 'Barcelona', 'PSG',
+  'Santos', 'Grêmio', 'Internacional', 'Atlético Mineiro',
+  'Cruzeiro', 'Vasco', 'Botafogo'
+)
 ORDER BY 
   CASE name
     WHEN 'Flamengo' THEN 1
@@ -184,6 +273,13 @@ ORDER BY
     WHEN 'Real Madrid' THEN 7
     WHEN 'Barcelona' THEN 8
     WHEN 'PSG' THEN 9
+    WHEN 'Santos' THEN 10
+    WHEN 'Grêmio' THEN 11
+    WHEN 'Internacional' THEN 12
+    WHEN 'Atlético Mineiro' THEN 13
+    WHEN 'Cruzeiro' THEN 14
+    WHEN 'Vasco' THEN 15
+    WHEN 'Botafogo' THEN 16
   END;
 
 -- Contar produtos por categoria
@@ -204,7 +300,12 @@ SELECT
   ROUND(AVG(price), 2) as preco_medio,
   ROUND(AVG(rating), 2) as rating_medio
 FROM products
-WHERE name IN ('Flamengo', 'Corinthians', 'Palmeiras', 'São Paulo', 'Brasil', 'Argentina', 'Real Madrid', 'Barcelona', 'PSG')
+WHERE name IN (
+  'Flamengo', 'Corinthians', 'Palmeiras', 'São Paulo', 
+  'Brasil', 'Argentina', 'Real Madrid', 'Barcelona', 'PSG',
+  'Santos', 'Grêmio', 'Internacional', 'Atlético Mineiro',
+  'Cruzeiro', 'Vasco', 'Botafogo'
+)
   AND deleted_at IS NULL;
 
 -- ============================================================================

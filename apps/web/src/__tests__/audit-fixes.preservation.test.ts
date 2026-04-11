@@ -198,7 +198,7 @@ describe('Preservation: Functional Behavior Unchanged', () => {
           fc.integer({ min: 0, max: 500 }),
           (subtotal) => {
             // Shipping logic (from OrderSummary component)
-            const freeShippingThreshold = 170;
+            const freeShippingThreshold = 200;
             const shippingCost = subtotal >= freeShippingThreshold ? 0 : 15;
             
             // Verify shipping logic is correct

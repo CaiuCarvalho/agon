@@ -8,8 +8,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { mercadoPagoService } from '@/modules/payment/services/mercadoPagoService';
-import { paymentService } from '@/modules/payment/services/paymentService';
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -101,16 +100,17 @@ export async function POST(request: NextRequest) {
     });
     
     // 6. Find payment in database by external_reference (order_id)
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const { data: payment, error: paymentError } = await supabase
       .from('payments')
-      .select('id, order_id, status')
+      .select('id, order_id, status, mercadopago_payment_id')
       .eq('order_id', paymentDetails.external_reference)
       .single();
     
     if (paymentError || !payment) {
       console.error('[Webhook] Payment not found in database:', {
         externalReference: paymentDetails.external_reference,
+        error: paymentError,
         correlationId,
       });
       return NextResponse.json(
@@ -119,7 +119,68 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // 7. Check if already processed (idempotency)
+    console.log('[Webhook] Payment found in database:', {
+      paymentId: payment.id,
+      orderId: payment.order_id,
+      currentStatus: payment.status,
+      storedMercadopagoPaymentId: payment.mercadopago_payment_id,
+      correlationId,
+    });
+    
+    const mercadopagoPaymentId = paymentDetails.id.toString();
+
+    // 7. Check for payment ID conflict (409 Conflict)
+    if (
+      payment.mercadopago_payment_id &&
+      payment.mercadopago_payment_id !== mercadopagoPaymentId
+    ) {
+      console.error('[Webhook] Payment ID mismatch - conflict detected:', {
+        orderId: payment.order_id,
+        storedPaymentId: payment.mercadopago_payment_id,
+        incomingPaymentId: mercadopagoPaymentId,
+        correlationId,
+      });
+      return NextResponse.json(
+        { error: 'Payment ID mismatch' },
+        { status: 409 }
+      );
+    }
+
+    // 8. Seed mercadopago_payment_id on first webhook (if NULL)
+    if (!payment.mercadopago_payment_id) {
+      console.log('[Webhook] Seeding Mercado Pago payment ID (first webhook):', {
+        paymentId: payment.id,
+        orderId: payment.order_id,
+        mercadopagoPaymentId,
+        correlationId,
+      });
+      
+      const { error: seedPaymentIdError } = await supabase
+        .from('payments')
+        .update({ mercadopago_payment_id: mercadopagoPaymentId })
+        .eq('id', payment.id)
+        .is('mercadopago_payment_id', null);
+
+      if (seedPaymentIdError) {
+        console.error('[Webhook] Failed to seed Mercado Pago payment ID:', {
+          error: seedPaymentIdError,
+          paymentId: payment.id,
+          correlationId,
+        });
+        return NextResponse.json(
+          { error: 'Failed to initialize payment mapping' },
+          { status: 500 }
+        );
+      }
+      
+      console.log('[Webhook] Successfully seeded Mercado Pago payment ID:', {
+        paymentId: payment.id,
+        mercadopagoPaymentId,
+        correlationId,
+      });
+    }
+
+    // 9. idempotency check: compare current status with new status
     if (payment.status === paymentDetails.status) {
       console.log('[Webhook] Idempotency check: Status unchanged, skipping update', {
         paymentId: payment.id,
@@ -132,20 +193,55 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ received: true, skipped: true }, { status: 200 });
     }
     
-    // 8. Update payment status via RPC function
+    console.log('[Webhook] Status change detected, proceeding with update:', {
+      paymentId: payment.id,
+      orderId: payment.order_id,
+      oldStatus: payment.status,
+      newStatus: paymentDetails.status,
+      correlationId,
+    });
+    
+    // 10. Update payment status via RPC function
+    console.log('[Webhook] Calling RPC function to update payment and order:', {
+      mercadopagoPaymentId,
+      newStatus: paymentDetails.status,
+      paymentMethod: paymentDetails.payment_method_id,
+      correlationId,
+    });
+    
     try {
-      const result = await paymentService.updatePaymentFromWebhook(
-        paymentDetails.id.toString(),
-        paymentDetails.status as any,
-        paymentDetails.payment_method_id
+      const { data: rpcResult, error: rpcError } = await supabase.rpc(
+        'update_payment_from_webhook',
+        {
+          p_mercadopago_payment_id: mercadopagoPaymentId,
+          p_status: paymentDetails.status,
+          p_payment_method: paymentDetails.payment_method_id,
+        }
       );
+
+      if (rpcError) {
+        console.error('[Webhook] RPC function returned error:', {
+          error: rpcError,
+          correlationId,
+        });
+        throw rpcError;
+      }
+
+      const result = rpcResult as any;
+      if (!result?.success) {
+        console.error('[Webhook] RPC function failed:', {
+          error: result?.error || 'Unknown error',
+          correlationId,
+        });
+        throw new Error(result?.error || 'Webhook RPC failed');
+      }
       
-      console.log('[Webhook] Payment status updated:', {
-        paymentId: result.paymentId,
-        orderId: result.orderId,
-        oldStatus: result.oldStatus,
-        newStatus: result.newStatus,
-        orderStatus: result.orderStatus,
+      console.log('[Webhook] Payment status updated successfully:', {
+        paymentId: result.payment_id ?? result.paymentId,
+        orderId: result.order_id ?? result.orderId,
+        oldStatus: result.old_payment_status ?? result.oldStatus ?? result.old_status,
+        newStatus: result.new_payment_status ?? result.newStatus ?? result.new_status,
+        orderStatus: result.order_status ?? result.orderStatus,
         action: 'updated',
         correlationId,
         timestamp: new Date().toISOString(),
@@ -158,7 +254,8 @@ export async function POST(request: NextRequest) {
       
     } catch (error: any) {
       console.error('[Webhook] Failed to update payment status:', {
-        error,
+        error: error.message,
+        stack: error.stack,
         paymentId: payment.id,
         orderId: payment.order_id,
         correlationId,

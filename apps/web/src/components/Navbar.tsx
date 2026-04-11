@@ -11,6 +11,7 @@ import QuickSearch from "./QuickSearch";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Logo } from "./ui/Logo";
 import { ProductDTO } from "@/lib/utils";
+import { buildApiUrl } from "@/lib/url";
 
 const navLinks = [
   { label: "Mantos", href: "/#produtos" },
@@ -65,8 +66,9 @@ const Navbar = () => {
     const timer = setTimeout(async () => {
       setIsSearchLoading(true);
       try {
-        const baseUrl = process.env.NEXT_PUBLIC_API_URL || "https://agonimports.com/api";
-        const response = await fetch(`${baseUrl}/api/products?search=${searchQuery}&limit=4`);
+        const response = await fetch(
+          `${buildApiUrl("/products")}?search=${encodeURIComponent(searchQuery)}&limit=4`
+        );
         const json = await response.json();
         setSearchResults(json.data?.products || []);
       } catch (err) {

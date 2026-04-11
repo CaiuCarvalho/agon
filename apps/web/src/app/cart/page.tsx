@@ -185,7 +185,13 @@ export default function CartPage() {
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">Frete</span>
-                  <span className="font-medium">Calculado no checkout</span>
+                  <span className="font-medium">
+                    {subtotal >= 200 ? (
+                      <span className="text-green-600 font-bold">GRÁTIS</span>
+                    ) : (
+                      "Calculado no checkout"
+                    )}
+                  </span>
                 </div>
                 <div className="border-t border-border pt-3 flex justify-between">
                   <span className="font-display uppercase tracking-tight">Total</span>
@@ -194,6 +200,27 @@ export default function CartPage() {
                   </span>
                 </div>
               </div>
+
+              {/* Free Shipping Progress */}
+              {subtotal < 200 ? (
+                <div className="bg-primary/5 p-4 rounded-lg border border-primary/20 mb-4">
+                  <p className="text-xs text-center text-primary font-bold uppercase tracking-wide mb-2">
+                    Faltam <span className="underline">R$ {(200 - subtotal).toFixed(2).replace(".", ",")}</span> para Frete Grátis!
+                  </p>
+                  <div className="w-full bg-primary/10 rounded-full h-2 overflow-hidden">
+                    <div 
+                      className="bg-primary h-full transition-all duration-300"
+                      style={{ width: `${Math.min((subtotal / 200) * 100, 100)}%` }}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
+                  <p className="text-xs text-center text-green-700 font-bold uppercase tracking-wide">
+                    🎉 Você ganhou Frete Grátis!
+                  </p>
+                </div>
+              )}
 
               <Link
                 href="/checkout"

@@ -7,6 +7,7 @@ import { useAdminDashboard } from '../../hooks/useAdminDashboard';
 import { MetricsCard } from './MetricsCard';
 import { RecentOrdersList } from './RecentOrdersList';
 import { LoadingSkeleton } from './LoadingSkeleton';
+import { RefreshCw } from 'lucide-react';
 
 export function DashboardPage() {
   const { metrics, loading, error, refetch } = useAdminDashboard();
@@ -36,64 +37,79 @@ export function DashboardPage() {
     return null;
   }
   
+  const totalOrders = Object.values(metrics.orderCounts).reduce((sum, count) => sum + count, 0);
+  
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-1.5">
+              <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+              <span className="text-sm text-gray-600">Atualizações em tempo real ativas</span>
+            </div>
+          </div>
+        </div>
         <button
           onClick={refetch}
-          className="px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg"
+          className="flex items-center gap-2 px-4 py-2 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
         >
-          Refresh
+          <RefreshCw className="w-4 h-4" />
+          Atualizar
         </button>
       </div>
       
-      {/* Metrics Cards */}
+      {/* Main Metrics Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <MetricsCard
-          title="Total Revenue"
+          title="Receita Total"
           value={metrics.totalRevenue}
           format="currency"
+          icon="revenue"
         />
         <MetricsCard
-          title="Pending Orders"
+          title="Total de Pedidos"
+          value={totalOrders}
+          format="number"
+          icon="cart"
+        />
+        <MetricsCard
+          title="Pedidos Pendentes"
           value={metrics.orderCounts.pending}
           format="number"
+          icon="pending"
         />
         <MetricsCard
-          title="Processing Orders"
-          value={metrics.orderCounts.processing}
-          format="number"
-        />
-        <MetricsCard
-          title="Average Order Value"
+          title="Ticket Médio"
           value={metrics.averageOrderValue}
           format="currency"
+          icon="average"
         />
       </div>
       
       {/* Order Status Summary */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Order Status Summary</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Resumo de Status dos Pedidos</h2>
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div>
-            <p className="text-sm text-gray-600">Pending</p>
+          <div className="p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+            <p className="text-sm text-gray-600 mb-1">Pendente</p>
             <p className="text-2xl font-bold text-yellow-600">{metrics.orderCounts.pending}</p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600">Processing</p>
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-gray-600 mb-1">Processando</p>
             <p className="text-2xl font-bold text-blue-600">{metrics.orderCounts.processing}</p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600">Shipped</p>
+          <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
+            <p className="text-sm text-gray-600 mb-1">Enviado</p>
             <p className="text-2xl font-bold text-purple-600">{metrics.orderCounts.shipped}</p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600">Delivered</p>
+          <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+            <p className="text-sm text-gray-600 mb-1">Entregue</p>
             <p className="text-2xl font-bold text-green-600">{metrics.orderCounts.delivered}</p>
           </div>
-          <div>
-            <p className="text-sm text-gray-600">Cancelled</p>
+          <div className="p-4 bg-red-50 rounded-lg border border-red-200">
+            <p className="text-sm text-gray-600 mb-1">Cancelado</p>
             <p className="text-2xl font-bold text-red-600">{metrics.orderCounts.cancelled}</p>
           </div>
         </div>

@@ -23,42 +23,10 @@ import { cartService } from '../services/cartService';
 import { localStorageService } from '../services/localStorageService';
 import { useMigrationStatus } from './useMigrationStatus';
 import type { CartItem } from '../types';
+import { transformCartItemRow } from '../utils/transformers';
 
 // Generate unique client ID for this session to filter own events
 const CLIENT_ID = crypto.randomUUID();
-
-/**
- * Transform database row (snake_case) to CartItem (camelCase)
- * This is needed for Realtime events which return raw database rows
- */
-function transformCartItemRow(row: any): CartItem {
-  return {
-    id: row.id,
-    userId: row.user_id,
-    productId: row.product_id,
-    quantity: row.quantity,
-    size: row.size,
-    priceSnapshot: parseFloat(row.price_snapshot),
-    productNameSnapshot: row.product_name_snapshot,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    product: row.product ? {
-      id: row.product.id,
-      name: row.product.name,
-      description: row.product.description,
-      price: parseFloat(row.product.price),
-      categoryId: row.product.category_id,
-      imageUrl: row.product.image_url,
-      stock: row.product.stock,
-      features: row.product.features || [],
-      rating: parseFloat(row.product.rating || 0),
-      reviews: row.product.reviews || 0,
-      createdAt: row.product.created_at,
-      updatedAt: row.product.updated_at,
-      deletedAt: row.product.deleted_at,
-    } : undefined,
-  };
-}
 
 export function useCart() {
   const { user } = useAuth();
@@ -68,7 +36,53 @@ export function useCart() {
   // Realtime reconnection state
   const reconnectAttempts = useRef(0);
   const pollingInterval = useRef<NodeJS.Timeout | null>(null);
+  const reconnectTimeout = useRef<NodeJS.Timeout | null>(null);
+  const [reconnectTick, setReconnectTick] = useState(0);
   const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'idle'>('idle');
+
+  /**
+   * Stop polling fallback when Realtime reconnects
+   */
+  const stopPolling = () => {
+    if (pollingInterval.current) {
+      clearInterval(pollingInterval.current);
+      pollingInterval.current = null;
+    }
+  };
+
+  /**
+   * Start polling fallback (30s interval) when Realtime fails
+   */
+  const startPolling = () => {
+    if (pollingInterval.current || !user) return;
+
+    // Set idle status when using polling fallback
+    setRealtimeStatus('idle');
+
+    pollingInterval.current = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
+    }, 30000); // Poll every 30s
+  };
+
+  /**
+   * Handle Realtime reconnection with exponential backoff
+   * Delays: 1s, 2s, 4s, 8s, max 30s
+   */
+  const handleReconnect = () => {
+    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
+    reconnectAttempts.current++;
+
+    // Start polling as fallback
+    startPolling();
+
+    if (reconnectTimeout.current) {
+      clearTimeout(reconnectTimeout.current);
+    }
+
+    reconnectTimeout.current = setTimeout(() => {
+      setReconnectTick((prev) => prev + 1);
+    }, delay);
+  };
   
   // Fetch cart items (blocked until migration completes or errors)
   const { data: items = [], isLoading, error } = useQuery({
@@ -79,20 +93,54 @@ export function useCart() {
         const items = await cartService.getCartItems(user.id);
         return items;
       } else {
-        // Guest: fetch from localStorage
+        // Guest: fetch from localStorage and hydrate product data
         const localCart = localStorageService.getCart();
-        // Return items in CartItem format (without product details for now)
-        return localCart.items.map(item => ({
-          id: `local-${item.productId}-${item.size}`,
-          userId: '',
-          productId: item.productId,
-          quantity: item.quantity,
-          size: item.size,
-          priceSnapshot: 0,
-          productNameSnapshot: '',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        })) as CartItem[];
+        if (localCart.items.length === 0) {
+          return [];
+        }
+
+        const supabase = createClient();
+        const productIds = Array.from(new Set(localCart.items.map((item) => item.productId)));
+        const { data: products } = await supabase
+          .from('products')
+          .select('*')
+          .in('id', productIds)
+          .is('deleted_at', null);
+
+        const productsById = new Map((products || []).map((product: any) => [product.id, product]));
+
+        return localCart.items.map((item) => {
+          const product = productsById.get(item.productId);
+
+          return {
+            id: `local:${item.productId}:${item.size}`,
+            userId: '',
+            productId: item.productId,
+            quantity: item.quantity,
+            size: item.size,
+            priceSnapshot: Number(product?.price || 0),
+            productNameSnapshot: product?.name || '',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            product: product
+              ? {
+                  id: product.id,
+                  name: product.name,
+                  description: product.description,
+                  price: Number(product.price || 0),
+                  categoryId: product.category_id,
+                  imageUrl: product.image_url,
+                  stock: product.stock,
+                  features: product.features || [],
+                  rating: Number(product.rating || 0),
+                  reviews: product.reviews || 0,
+                  createdAt: product.created_at,
+                  updatedAt: product.updated_at,
+                  deletedAt: product.deleted_at,
+                }
+              : undefined,
+          };
+        }) as CartItem[];
       }
     },
     enabled: migrationStatus === 'complete' || migrationStatus === 'error', // Migration gate - allow queries even on error
@@ -167,6 +215,10 @@ export function useCart() {
         if (status === 'SUBSCRIBED') {
           setRealtimeStatus('connected');
           reconnectAttempts.current = 0;
+          if (reconnectTimeout.current) {
+            clearTimeout(reconnectTimeout.current);
+            reconnectTimeout.current = null;
+          }
           stopPolling();
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
           setRealtimeStatus('disconnected');
@@ -179,44 +231,12 @@ export function useCart() {
       channel.unsubscribe();
       supabase.removeChannel(channel);
       stopPolling();
+      if (reconnectTimeout.current) {
+        clearTimeout(reconnectTimeout.current);
+        reconnectTimeout.current = null;
+      }
     };
-  }, [user, queryClient, migrationStatus]);
-  
-  /**
-   * Handle Realtime reconnection with exponential backoff
-   * Delays: 1s, 2s, 4s, 8s, max 30s
-   */
-  const handleReconnect = () => {
-    const delay = Math.min(1000 * Math.pow(2, reconnectAttempts.current), 30000);
-    reconnectAttempts.current++;
-    
-    // Start polling as fallback
-    startPolling();
-  };
-  
-  /**
-   * Start polling fallback (30s interval) when Realtime fails
-   */
-  const startPolling = () => {
-    if (pollingInterval.current || !user) return;
-    
-    // Set idle status when using polling fallback
-    setRealtimeStatus('idle');
-    
-    pollingInterval.current = setInterval(() => {
-      queryClient.invalidateQueries({ queryKey: ['cart', user.id] });
-    }, 30000); // Poll every 30s
-  };
-  
-  /**
-   * Stop polling fallback when Realtime reconnects
-   */
-  const stopPolling = () => {
-    if (pollingInterval.current) {
-      clearInterval(pollingInterval.current);
-      pollingInterval.current = null;
-    }
-  };
+  }, [user, queryClient, migrationStatus, reconnectTick]);
   
   // Calculate cart summary
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);

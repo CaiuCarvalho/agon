@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { isAdminRole } from '@/lib/auth/roles';
 
 export function useAdminAuth() {
   const [loading, setLoading] = useState(true);
@@ -35,7 +36,12 @@ export function useAdminAuth() {
         .eq('id', user.id)
         .single();
       
-      if (profileError || !profile || profile.role !== 'admin') {
+      const isAdmin = isAdminRole({
+        profileRole: profile?.role,
+        metadataRole: user.user_metadata?.role,
+      });
+
+      if (!isAdmin) {
         router.push('/');
         return;
       }

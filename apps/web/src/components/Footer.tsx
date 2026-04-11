@@ -21,6 +21,7 @@ const Footer = () => {
               <li><Link href="/products" className="transition-colors hover:text-secondary">Produtos</Link></li>
               <li><Link href="#categorias" className="transition-colors hover:text-secondary">Categorias</Link></li>
               <li><Link href="#depoimentos" className="transition-colors hover:text-secondary">Depoimentos</Link></li>
+              <li><Link href="/privacidade" className="transition-colors hover:text-secondary">Privacidade</Link></li>
             </ul>
           </div>
 
@@ -38,12 +39,6 @@ const Footer = () => {
             <div className="mt-3 flex gap-4">
               <Link href="#" className="text-primary-foreground/70 transition-colors hover:text-secondary">
                 Instagram
-              </Link>
-              <Link href="#" className="text-primary-foreground/70 transition-colors hover:text-secondary">
-                Facebook
-              </Link>
-              <Link href="#" className="text-primary-foreground/70 transition-colors hover:text-secondary">
-                Twitter
               </Link>
             </div>
           </div>

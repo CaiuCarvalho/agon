@@ -1,7 +1,7 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://agonimports.com/api";
+import { buildApiUrl } from "@/lib/url";
 
 export async function fetchProducts() {
-  const response = await fetch(`${API_URL}/products`, {
+  const response = await fetch(buildApiUrl("/products"), {
     next: { revalidate: 60 },
   });
   
@@ -13,7 +13,7 @@ export async function fetchProducts() {
 }
 
 export async function fetchProductById(id: string) {
-  const response = await fetch(`${API_URL}/products/${id}`, {
+  const response = await fetch(buildApiUrl(`/products/${id}`), {
     next: { revalidate: 60 },
   });
   

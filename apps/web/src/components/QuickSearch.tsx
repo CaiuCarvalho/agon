@@ -92,7 +92,7 @@ export default function QuickSearch({ isOpen, query, results, isLoading, onClose
                   </div>
                   
                   <Link
-                    href={`/products?search=${query}`}
+                    href={`/products?search=${encodeURIComponent(query)}`}
                     onClick={onClose}
                     className="group flex items-center justify-between w-full h-16 px-8 rounded-full bg-primary text-primary-foreground font-display text-[10px] font-black uppercase tracking-[0.2em] shadow-neon hover:shadow-neon-intense hover:-translate-y-1 transition-all"
                   >

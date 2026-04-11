@@ -21,7 +21,7 @@ export default async function HomeWrapper() {
     console.log('[HomeWrapper] Fetching products server-side...');
     const startTime = Date.now();
     
-    const result = await getProducts({ limit: 4, sortBy: 'latest' });
+    const result = await getProducts({ limit: 16, sortBy: 'latest' });
     initialProducts = result.products;
     
     const fetchTime = Date.now() - startTime;
