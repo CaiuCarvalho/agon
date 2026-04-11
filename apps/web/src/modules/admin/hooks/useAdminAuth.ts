@@ -7,6 +7,23 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
 
+const AUTH_TIMEOUT_MS = 8000;
+
+async function withTimeout<T>(promise: PromiseLike<T>, timeoutMs: number, label: string): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error(`${label} timeout`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
 export function useAdminAuth() {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -21,7 +38,11 @@ export function useAdminAuth() {
       const supabase = createClient();
       
       // Check authentication
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await withTimeout(
+        supabase.auth.getUser(),
+        AUTH_TIMEOUT_MS,
+        'supabase.auth.getUser'
+      );
       
       if (authError || !user) {
         router.push('/login?redirect=/admin');
@@ -29,11 +50,23 @@ export function useAdminAuth() {
       }
       
       // Check role
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
+      const profileQuery = supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+      
+      const { data: profile, error: profileError } = await withTimeout<{
+        data: { role: string | null } | null;
+        error: { message: string } | null;
+      }>(
+        profileQuery as PromiseLike<{
+          data: { role: string | null } | null;
+          error: { message: string } | null;
+        }>,
+        AUTH_TIMEOUT_MS,
+        'profiles.role query'
+      );
       
       if (profileError || !profile || profile.role !== 'admin') {
         router.push('/');
