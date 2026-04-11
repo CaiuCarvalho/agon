@@ -17,16 +17,20 @@
 -- ============================================================================
 
 -- ============================================================================
--- 1. LIMPAR PRODUTOS EXISTENTES (RECOMENDADO)
+-- 1. LIMPAR PRODUTOS EXISTENTES (SOFT DELETE - PRESERVA HISTÓRICO)
 -- ============================================================================
 
--- Limpar produtos com estes nomes antes de inserir (evita duplicação)
-DELETE FROM products WHERE name IN (
+-- Usar SOFT DELETE ao invés de DELETE para preservar histórico de pedidos
+-- Isso evita violar foreign keys de order_items, cart_items, wishlist_items
+UPDATE products 
+SET deleted_at = now() 
+WHERE name IN (
   'Flamengo', 'Corinthians', 'Palmeiras', 'São Paulo', 
   'Brasil', 'Argentina', 'Real Madrid', 'Barcelona', 'PSG',
   'Santos', 'Grêmio', 'Internacional', 'Atlético Mineiro',
   'Cruzeiro', 'Vasco', 'Botafogo'
-);
+)
+AND deleted_at IS NULL;
 
 -- ============================================================================
 -- 2. VERIFICAR CATEGORIAS EXISTENTES
@@ -240,7 +244,17 @@ VALUES
     4.7,
     82
   )
-ON CONFLICT (id) DO NOTHING;
+ON CONFLICT (name) DO UPDATE SET
+  description = EXCLUDED.description,
+  price = EXCLUDED.price,
+  category_id = EXCLUDED.category_id,
+  image_url = EXCLUDED.image_url,
+  stock = EXCLUDED.stock,
+  features = EXCLUDED.features,
+  rating = EXCLUDED.rating,
+  reviews = EXCLUDED.reviews,
+  deleted_at = NULL,  -- Reativar se estava deletado
+  updated_at = now();
 
 -- ============================================================================
 -- 4. VERIFICAÇÃO
