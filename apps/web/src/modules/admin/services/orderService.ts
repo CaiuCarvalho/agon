@@ -1,7 +1,7 @@
 // Order Service
 // Provides order listing and details for admin panel
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { OrderWithDetails, ServiceResult } from '../types';
 import type { OrderFiltersInput } from '../schemas';
 import { orderFiltersSchema } from '../schemas';
@@ -35,7 +35,9 @@ export async function listOrders(filters: OrderFiltersInput): Promise<ServiceRes
     const { page, pageSize, paymentStatus, shippingStatus } = validation.data;
     const offset = (page - 1) * pageSize;
     
-    const supabase = await createClient();
+    // Use service role for admin panel reads.
+    // Admin access is enforced at route layer via validateAdmin().
+    const supabase = createAdminClient();
     
     // Build query
     let query = supabase
@@ -105,7 +107,7 @@ export async function listOrders(filters: OrderFiltersInput): Promise<ServiceRes
     }
     
     // Transform data
-    const orders: OrderWithDetails[] = data.map((order: any) => ({
+    const orders: OrderWithDetails[] = (data || []).map((order: any) => ({
       id: order.id,
       userId: order.user_id,
       status: order.status,
@@ -135,15 +137,29 @@ export async function listOrders(filters: OrderFiltersInput): Promise<ServiceRes
         subtotal: item.subtotal,
       })) : [],
       payment: {
-        id: order.payments.id,
+        id: Array.isArray(order.payments) ? order.payments[0]?.id : order.payments?.id,
         orderId: order.id,
-        mercadopagoPaymentId: order.payments.mercadopago_payment_id,
-        mercadopagoPreferenceId: order.payments.mercadopago_preference_id,
-        status: order.payments.status,
-        paymentMethod: order.payments.payment_method,
-        amount: order.payments.amount,
-        createdAt: order.payments.created_at,
-        updatedAt: order.payments.updated_at,
+        mercadopagoPaymentId: Array.isArray(order.payments)
+          ? order.payments[0]?.mercadopago_payment_id
+          : order.payments?.mercadopago_payment_id,
+        mercadopagoPreferenceId: Array.isArray(order.payments)
+          ? order.payments[0]?.mercadopago_preference_id
+          : order.payments?.mercadopago_preference_id,
+        status: Array.isArray(order.payments)
+          ? order.payments[0]?.status
+          : order.payments?.status,
+        paymentMethod: Array.isArray(order.payments)
+          ? order.payments[0]?.payment_method
+          : order.payments?.payment_method,
+        amount: Array.isArray(order.payments)
+          ? order.payments[0]?.amount
+          : order.payments?.amount,
+        createdAt: Array.isArray(order.payments)
+          ? order.payments[0]?.created_at
+          : order.payments?.created_at,
+        updatedAt: Array.isArray(order.payments)
+          ? order.payments[0]?.updated_at
+          : order.payments?.updated_at,
       },
     }));
     
@@ -173,7 +189,7 @@ export async function listOrders(filters: OrderFiltersInput): Promise<ServiceRes
  */
 export async function getOrderDetails(id: string): Promise<ServiceResult<OrderWithDetails>> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     
     const { data, error } = await supabase
       .from('orders')
@@ -248,7 +264,7 @@ export async function getOrderDetails(id: string): Promise<ServiceResult<OrderWi
       shippedAt: data.shipped_at,
       createdAt: data.created_at,
       updatedAt: data.updated_at,
-      items: (data.order_items as any[]).map(item => ({
+      items: ((data.order_items as any[]) || []).map(item => ({
         id: item.id,
         orderId: data.id,
         productId: item.product_id,
@@ -259,15 +275,29 @@ export async function getOrderDetails(id: string): Promise<ServiceResult<OrderWi
         subtotal: item.subtotal,
       })),
       payment: {
-        id: (data.payments as any).id,
+        id: Array.isArray(data.payments) ? data.payments[0]?.id : (data.payments as any)?.id,
         orderId: data.id,
-        mercadopagoPaymentId: (data.payments as any).mercadopago_payment_id,
-        mercadopagoPreferenceId: (data.payments as any).mercadopago_preference_id,
-        status: (data.payments as any).status,
-        paymentMethod: (data.payments as any).payment_method,
-        amount: (data.payments as any).amount,
-        createdAt: (data.payments as any).created_at,
-        updatedAt: (data.payments as any).updated_at,
+        mercadopagoPaymentId: Array.isArray(data.payments)
+          ? data.payments[0]?.mercadopago_payment_id
+          : (data.payments as any)?.mercadopago_payment_id,
+        mercadopagoPreferenceId: Array.isArray(data.payments)
+          ? data.payments[0]?.mercadopago_preference_id
+          : (data.payments as any)?.mercadopago_preference_id,
+        status: Array.isArray(data.payments)
+          ? data.payments[0]?.status
+          : (data.payments as any)?.status,
+        paymentMethod: Array.isArray(data.payments)
+          ? data.payments[0]?.payment_method
+          : (data.payments as any)?.payment_method,
+        amount: Array.isArray(data.payments)
+          ? data.payments[0]?.amount
+          : (data.payments as any)?.amount,
+        createdAt: Array.isArray(data.payments)
+          ? data.payments[0]?.created_at
+          : (data.payments as any)?.created_at,
+        updatedAt: Array.isArray(data.payments)
+          ? data.payments[0]?.updated_at
+          : (data.payments as any)?.updated_at,
       },
     };
     

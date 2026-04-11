@@ -1,7 +1,7 @@
 // Dashboard Service
 // Provides dashboard metrics calculation and data fetching
 
-import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { DashboardMetrics, OrderSummary, ServiceResult } from '../types';
 
 /**
@@ -17,7 +17,9 @@ import type { DashboardMetrics, OrderSummary, ServiceResult } from '../types';
  */
 export async function getDashboardMetrics(): Promise<ServiceResult<DashboardMetrics>> {
   try {
-    const supabase = await createClient();
+    // Use service role for admin panel reads.
+    // Admin access is enforced at route layer via validateAdmin().
+    const supabase = createAdminClient();
     
     // Calculate total revenue from approved payments
     const { data: revenueData, error: revenueError } = await supabase
@@ -26,6 +28,7 @@ export async function getDashboardMetrics(): Promise<ServiceResult<DashboardMetr
       .eq('status', 'approved');
     
     if (revenueError) {
+      console.error('[Dashboard Service] Revenue error:', revenueError);
       return {
         success: false,
         error: {
@@ -44,6 +47,7 @@ export async function getDashboardMetrics(): Promise<ServiceResult<DashboardMetr
       .select('status');
     
     if (ordersError) {
+      console.error('[Dashboard Service] Orders error:', ordersError);
       return {
         success: false,
         error: {
@@ -81,6 +85,7 @@ export async function getDashboardMetrics(): Promise<ServiceResult<DashboardMetr
       .limit(10);
     
     if (recentOrdersError) {
+      console.error('[Dashboard Service] Recent orders error:', recentOrdersError);
       return {
         success: false,
         error: {
@@ -94,7 +99,9 @@ export async function getDashboardMetrics(): Promise<ServiceResult<DashboardMetr
       id: order.id,
       customerName: order.shipping_name,
       totalAmount: order.total_amount,
-      paymentStatus: (order.payments as any).status,
+      paymentStatus: Array.isArray(order.payments)
+        ? (order.payments[0]?.status || 'pending')
+        : ((order.payments as any)?.status || 'pending'),
       shippingStatus: order.shipping_status,
       createdAt: order.created_at,
     }));
