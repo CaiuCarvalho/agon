@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Hero from "@/components/Hero";
 import CategoryBanners from "@/components/CategoryBanners";
-import HomeProductsSection from "@/components/HomeProductsSection";
+import { ProductsCarousel } from "@/components/ProductsCarousel";
 import Testimonials from "@/components/Testimonials";
 import { Truck, ShieldCheck, RefreshCcw, Zap, Star, Users } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
@@ -14,8 +14,8 @@ import type { Product } from "@/modules/products/types";
 
 // Imagens migradas para /public/images/
 const images = {
-  structure: "/images/ui/structure_of_a_champion.png",
-  pele: "/images/history/pele_celebration.png",
+  structure: "/images/ui/world-cup-trophy.jpg", // Troféu da Copa do Mundo
+  pele: "/images/history/pele_celebration.jpg", // Imagem do Pelé
 };
 
 interface HomeProps {
@@ -42,7 +42,7 @@ export default function Home({ initialProducts, productsError }: HomeProps) {
         <div className="container mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
           <div className="flex flex-col items-center text-center gap-2">
             <Truck className="h-6 w-6 text-primary" />
-            <p className="text-[10px] font-black uppercase tracking-widest">Frete Grátis Sul/Sudeste</p>
+            <p className="text-[10px] font-black uppercase tracking-widest">Frete Grátis acima de R$ 200</p>
           </div>
           <div className="flex flex-col items-center text-center gap-2">
             <ShieldCheck className="h-6 w-6 text-primary" />
@@ -50,7 +50,7 @@ export default function Home({ initialProducts, productsError }: HomeProps) {
           </div>
           <div className="flex flex-col items-center text-center gap-2">
             <RefreshCcw className="h-6 w-6 text-primary" />
-            <p className="text-[10px] font-black uppercase tracking-widest">Troca Grátis em 30 dias</p>
+            <p className="text-[10px] font-black uppercase tracking-widest">Troca Grátis em até 7 dias</p>
           </div>
           <div className="flex flex-col items-center text-center gap-2">
             <Zap className="h-6 w-6 text-primary" />
@@ -72,7 +72,7 @@ export default function Home({ initialProducts, productsError }: HomeProps) {
             <div className="h-2 w-24 bg-primary mt-8" />
           </div>
 
-          <HomeProductsSection 
+          <ProductsCarousel 
             initialProducts={initialProducts} 
             error={productsError} 
           />
@@ -83,17 +83,18 @@ export default function Home({ initialProducts, productsError }: HomeProps) {
       <section className="py-32 bg-muted/10">
         <div className="container mx-auto px-6 md:px-12">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-            <div className="relative group overflow-hidden rounded-[2rem] h-[500px]">
-              <Image
-                src={images.structure}
-                alt="Elite Trophy"
-                fill
-                sizes="(max-width: 768px) 100vw, 50vw"
-                className="object-cover scale-105 group-hover:scale-110 transition-transform duration-700"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-10 left-10">
-                <p className="text-white font-black uppercase tracking-[0.5em] text-[10px]">Agon Prestige</p>
+            <div className="relative group overflow-hidden rounded-[2rem] bg-gradient-to-br from-muted/30 to-muted/10 min-h-[600px]">
+              <div className="relative w-full h-full min-h-[600px]">
+                <Image
+                  src={images.structure}
+                  alt="FIFA World Cup Trophy"
+                  fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                  className="object-cover scale-110 group-hover:scale-115 transition-transform duration-700"
+                />
+              </div>
+              <div className="absolute bottom-10 left-10 z-10">
+                <p className="text-foreground font-black uppercase tracking-[0.5em] text-[10px]">Agon Prestige</p>
                 <div className="h-1 w-20 bg-primary mt-2" />
               </div>
             </div>

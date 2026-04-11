@@ -19,6 +19,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { motion } from "framer-motion";
 import { ResetPasswordFormValues } from "@/types/form";
+import { buildApiUrl } from "@/lib/url";
 
 const resetPasswordSchema = z.object({
   code: z.string().length(6, "O código deve ter 6 dígitos."),
@@ -53,7 +54,7 @@ export function ResetPasswordForm({ email, onBack }: ResetPasswordFormProps) {
   async function onSubmit(data: ResetPasswordValues) {
     setIsLoading(true);
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/reset-password`, {
+      const response = await fetch(buildApiUrl("/auth/reset-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

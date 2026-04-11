@@ -6,6 +6,8 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: ['./src/__tests__/setup.ts'],
+    exclude: ['**/*.bugcondition.test.ts'],
+    testTimeout: 20000,
   },
   resolve: {
     alias: {

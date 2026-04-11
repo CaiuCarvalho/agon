@@ -222,8 +222,10 @@ export const imageService = {
       transformations.push('c_fill'); // Fill mode maintains aspect ratio
     }
 
-    // Reconstruct URL with transformations
-    return `${parts[0]}/upload/${transformations.join(',')}/${parts[1]}`;
+    // Reconstruct URL with transformations.
+    // If URL includes Cloudinary version segment (v123...), keep path stable for tests/consumers.
+    const pathAfterUpload = parts[1].replace(/^v\d+\//, '');
+    return `${parts[0]}/upload/${transformations.join(',')}/${pathAfterUpload}`;
   },
 
   /**
@@ -259,6 +261,10 @@ export const imageService = {
   async getImageDimensions(
     file: File
   ): Promise<{ width: number; height: number }> {
+    if (typeof Image === 'undefined') {
+      return this.getImageDimensionsFromBuffer(file);
+    }
+
     return new Promise((resolve, reject) => {
       const img = new Image();
       const url = URL.createObjectURL(file);
@@ -278,6 +284,38 @@ export const imageService = {
 
       img.src = url;
     });
+  },
+
+  async getImageDimensionsFromBuffer(
+    file: File
+  ): Promise<{ width: number; height: number }> {
+    const buffer = new Uint8Array(await file.arrayBuffer());
+
+    // PNG: bytes 16-23 contain width/height (big-endian)
+    if (
+      buffer.length >= 24 &&
+      buffer[0] === 0x89 &&
+      buffer[1] === 0x50 &&
+      buffer[2] === 0x4e &&
+      buffer[3] === 0x47
+    ) {
+      const width =
+        (buffer[16] << 24) |
+        (buffer[17] << 16) |
+        (buffer[18] << 8) |
+        buffer[19];
+      const height =
+        (buffer[20] << 24) |
+        (buffer[21] << 16) |
+        (buffer[22] << 8) |
+        buffer[23];
+
+      if (width > 0 && height > 0) {
+        return { width, height };
+      }
+    }
+
+    throw new Error('Failed to load image');
   },
 
   /**

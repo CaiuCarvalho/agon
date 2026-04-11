@@ -1,7 +1,7 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://agonimports.com/api";
+import { buildApiUrl } from "@/lib/url";
 
 export async function createOrder(cartItems: unknown[]) {
-  const response = await fetch(`${API_URL}/payments/create`, {
+  const response = await fetch(buildApiUrl("/payments/create"), {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

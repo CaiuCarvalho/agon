@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { isAdminRole } from '@/lib/auth/roles'
 
 export async function middleware(request: NextRequest) {
   try {
@@ -60,7 +61,12 @@ export async function middleware(request: NextRequest) {
         .eq('id', session.user.id)
         .single()
 
-      if (profile?.role !== 'admin') {
+      const isAdmin = isAdminRole({
+        profileRole: profile?.role,
+        metadataRole: session.user.user_metadata?.role,
+      })
+
+      if (!isAdmin) {
         return NextResponse.redirect(new URL('/', request.url))
       }
     }
@@ -68,7 +74,18 @@ export async function middleware(request: NextRequest) {
     return supabaseResponse
   } catch (error) {
     console.error('[Middleware] Error:', error)
-    // If middleware fails, allow the request to continue
+
+    const isProtectedPath =
+      request.nextUrl.pathname.startsWith('/admin') ||
+      request.nextUrl.pathname.startsWith('/perfil')
+
+    if (isProtectedPath) {
+      const redirectUrl = request.nextUrl.clone()
+      redirectUrl.pathname = '/login'
+      redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
+      return NextResponse.redirect(redirectUrl)
+    }
+
     return NextResponse.next()
   }
 }

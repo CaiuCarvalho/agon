@@ -264,3 +264,18 @@ PARAR e perguntar ao usuÃ¡rio. Registrar em OPEN QUESTIONS.
 ---
 
 **DocumentaÃ§Ã£o Completa e Alinhada com CÃ³digo Real** âœ…
+
+---
+
+## Skills de Agentes (Novo)
+
+Use `reference/skills/README.md` como ponto de entrada para execução com SDD rígido.
+
+Skills disponíveis:
+- `reference/skills/sdd-orchestrator.md`
+- `reference/skills/architecture-guardrails.md`
+- `reference/skills/tech-stack-rules.md`
+- `reference/skills/testing-quality.md`
+- `reference/skills/ui-design-system.md`
+- `reference/skills/bugfix-regression.md`
+- `reference/skills/handoff-notion.md`

@@ -226,9 +226,16 @@ export function useCartMutations() {
           cartService.removeFromCart(user.id, itemId)
         );
       } else {
-        // For localStorage, itemId is actually a composite key string
-        // Format: "productId:size"
-        const [productId, size] = itemId.split(':');
+        // For localStorage, support both guest ID formats:
+        // 1) "productId:size"
+        // 2) "local:productId:size"
+        const normalizedId = itemId.startsWith('local:') ? itemId.slice('local:'.length) : itemId;
+        const [productId, size] = normalizedId.split(':');
+
+        if (!productId || !size) {
+          throw new Error('Invalid local cart item identifier');
+        }
+
         localStorageService.removeFromCart(productId, size);
         return null;
       }

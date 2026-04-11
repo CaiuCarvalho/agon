@@ -6,6 +6,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { isAdminRole } from '@/lib/auth/roles';
 
 const AUTH_TIMEOUT_MS = 8000;
 
@@ -68,7 +69,12 @@ export function useAdminAuth() {
         'profiles.role query'
       );
       
-      if (profileError || !profile || profile.role !== 'admin') {
+      const isAdmin = isAdminRole({
+        profileRole: profile?.role,
+        metadataRole: user.user_metadata?.role,
+      });
+
+      if (!isAdmin) {
         router.push('/');
         return;
       }

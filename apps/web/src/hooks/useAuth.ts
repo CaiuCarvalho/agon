@@ -1,6 +1,6 @@
 "use client";
 
-import { useAuthContext, type UserAuth } from "@/context/AuthContext";
+import { useAuthContext, type UserAuth } from "@/context/auth-context";
 
 export type { UserAuth };
 

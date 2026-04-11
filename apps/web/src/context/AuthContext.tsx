@@ -1,32 +1,13 @@
 "use client";
 
-import React, { createContext, useState, useEffect, useCallback, useContext } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
+import { AuthContext } from "./auth-context";
+import type { UserAuth } from "./auth-context";
 
-export interface UserAuth {
-  id: string;
-  name: string;
-  email: string;
-  role?: string;
-  avatarUrl?: string;
-  taxId?: string;
-  phone?: string;
-}
-
-interface AuthContextType {
-  user: UserAuth | null;
-  session: Session | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  signup: (email: string, password: string, name: string) => Promise<void>;
-  logout: () => Promise<void>;
-  updateUser: (newData: Partial<UserAuth>) => Promise<void>;
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+export type { UserAuth };
 
 function mapSupabaseUserToUserAuth(user: User, profile: { name?: string; role?: string; avatar_url?: string; tax_id?: string; phone?: string } | null): UserAuth {
   return {
@@ -204,10 +185,4 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function useAuthContext() {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error("useAuthContext must be used within an AuthProvider");
-  }
-  return context;
-}
+export { useAuthContext } from "./auth-context";
