@@ -77,6 +77,8 @@ export interface Product {
   description: string;
   price: number;
   stock: number;
+  /** When true, the supplier manages stock; the stock field is ignored for availability checks */
+  unlimitedStock: boolean;
   category: string;
   sizes: string[];
   images: string[];

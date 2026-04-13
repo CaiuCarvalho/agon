@@ -74,7 +74,17 @@ export function useRealtimeOrders(
   options: UseRealtimeOrdersOptions = {}
 ): UseRealtimeOrdersReturn {
   const { onInsert, onUpdate, onError } = options;
-  
+
+  // Keep latest callbacks in refs so subscription never needs to be rebuilt
+  // when the parent re-renders and passes new callback references
+  const onInsertRef = useRef(onInsert);
+  const onUpdateRef = useRef(onUpdate);
+  const onErrorRef = useRef(onError);
+
+  useEffect(() => { onInsertRef.current = onInsert; }, [onInsert]);
+  useEffect(() => { onUpdateRef.current = onUpdate; }, [onUpdate]);
+  useEffect(() => { onErrorRef.current = onError; }, [onError]);
+
   const [status, setStatus] = useState<'connected' | 'disconnected' | 'error'>('disconnected');
   const channelRef = useRef<RealtimeChannel | null>(null);
   const reconnectAttemptsRef = useRef(0);
@@ -116,12 +126,14 @@ export function useRealtimeOrders(
   }, []);
   
   /**
-   * Setup Supabase Realtime subscription
+   * Setup Supabase Realtime subscription.
+   * Uses callback refs so the subscription is created once and never rebuilt
+   * due to parent re-renders passing new callback references.
    */
   const setupSubscription = useCallback(() => {
     try {
       const supabase = createClient();
-      
+
       // Create channel for admin orders
       const channel = supabase
         .channel('admin-orders')
@@ -135,10 +147,10 @@ export function useRealtimeOrders(
           (payload) => {
             try {
               const newOrder = transformOrder(payload.new);
-              onInsert?.(newOrder);
+              onInsertRef.current?.(newOrder);
             } catch (error) {
               console.error('Error processing INSERT event:', error);
-              onError?.(error instanceof Error ? error : new Error('Unknown error'));
+              onErrorRef.current?.(error instanceof Error ? error : new Error('Unknown error'));
             }
           }
         )
@@ -154,10 +166,10 @@ export function useRealtimeOrders(
             try {
               const updatedOrder = transformOrder(payload.new);
               const oldOrder = payload.old ? transformOrder(payload.old) : undefined;
-              onUpdate?.(updatedOrder, oldOrder);
+              onUpdateRef.current?.(updatedOrder, oldOrder);
             } catch (error) {
               console.error('Error processing UPDATE event:', error);
-              onError?.(error instanceof Error ? error : new Error('Unknown error'));
+              onErrorRef.current?.(error instanceof Error ? error : new Error('Unknown error'));
             }
           }
         )
@@ -179,15 +191,15 @@ export function useRealtimeOrders(
             console.warn('[useRealtimeOrders] Channel closed');
           }
         });
-      
+
       channelRef.current = channel;
     } catch (error) {
       console.error('[useRealtimeOrders] Error setting up subscription:', error);
       setStatus('error');
-      onError?.(error instanceof Error ? error : new Error('Failed to setup subscription'));
+      onErrorRef.current?.(error instanceof Error ? error : new Error('Failed to setup subscription'));
       handleReconnect();
     }
-  }, [onInsert, onUpdate, onError, transformOrder]);
+  }, [transformOrder]); // removed onInsert/onUpdate/onError — accessed via stable refs
   
   /**
    * Handle reconnection with exponential backoff
@@ -197,7 +209,7 @@ export function useRealtimeOrders(
       console.error('[useRealtimeOrders] Max reconnection attempts reached');
       setStatus('error');
       const error = new Error('Failed to reconnect after maximum attempts');
-      onError?.(error);
+      onErrorRef.current?.(error);
       return;
     }
     
@@ -217,7 +229,7 @@ export function useRealtimeOrders(
       cleanup();
       setupSubscription();
     }, delay);
-  }, [getBackoffDelay, onError, setupSubscription]);
+  }, [getBackoffDelay, setupSubscription]); // onError accessed via ref
   
   /**
    * Cleanup subscription and timeouts

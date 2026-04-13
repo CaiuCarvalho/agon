@@ -8,10 +8,15 @@ export const productSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   price: z.number().min(0, 'Price must be non-negative'),
   stock: z.number().int().min(0, 'Stock must be non-negative'),
+  /** When true, supplier manages stock and the stock field is ignored for availability */
+  unlimitedStock: z.boolean().default(false),
   category: z.string().min(1, 'Category is required'),
   sizes: z.array(z.string()).min(1, 'At least one size required'),
   images: z.array(z.string().url()).min(1, 'At least one image required'),
 });
+
+/** Used for PATCH / partial updates — all fields optional */
+export const productUpdateSchema = productSchema.partial();
 
 export const shippingUpdateSchema = z.object({
   shippingStatus: z.enum(['pending', 'processing', 'shipped', 'delivered']),
@@ -42,6 +47,7 @@ export const orderFiltersSchema = z.object({
 });
 
 export type ProductInput = z.infer<typeof productSchema>;
+export type ProductUpdateInput = z.infer<typeof productUpdateSchema>;
 export type ShippingUpdateInput = z.infer<typeof shippingUpdateSchema>;
 export type StockUpdateInput = z.infer<typeof stockUpdateSchema>;
 export type OrderFiltersInput = z.infer<typeof orderFiltersSchema>;

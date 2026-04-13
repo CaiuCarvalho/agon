@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Bell, Volume2, Monitor } from 'lucide-react';
 
 const PREFERENCES_KEY = 'admin-notification-preferences';
@@ -210,11 +210,12 @@ export function NotificationPreferences({ onPreferencesChange }: NotificationPre
 }
 
 /**
- * Hook to load notification preferences
+ * Hook to load notification preferences.
+ * Returns a stable memoized object — only changes when preference values actually change.
  */
 export function useNotificationPreferences(): NotificationPreferences {
   const [preferences, setPreferences] = useState<NotificationPreferences>(defaultPreferences);
-  
+
   useEffect(() => {
     const stored = localStorage.getItem(PREFERENCES_KEY);
     if (stored) {
@@ -226,6 +227,10 @@ export function useNotificationPreferences(): NotificationPreferences {
       }
     }
   }, []);
-  
-  return preferences;
+
+  // Memoize so consumers don't see a new object reference on every render
+  return useMemo(
+    () => preferences,
+    [preferences.toast, preferences.browser, preferences.sound]
+  );
 }

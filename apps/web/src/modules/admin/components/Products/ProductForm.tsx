@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { Product } from '../../types';
 import type { ProductInput } from '../../schemas';
+import { ImageUpload } from './ImageUpload';
 
 interface ProductFormProps {
   product: Product | null;
@@ -8,18 +9,29 @@ interface ProductFormProps {
   onCancel: () => void;
 }
 
+function buildFormData(product: Product | null): ProductInput {
+  return {
+    name: product?.name ?? '',
+    description: product?.description ?? '',
+    price: product?.price ?? 0,
+    stock: product?.stock ?? 0,
+    unlimitedStock: product?.unlimitedStock ?? false,
+    category: product?.category ?? '',
+    sizes: product?.sizes ?? [],
+    images: product?.images ?? [],
+  };
+}
+
 export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
-  const [formData, setFormData] = useState<ProductInput>({
-    name: product?.name || '',
-    description: product?.description || '',
-    price: product?.price || 0,
-    stock: product?.stock || 0,
-    category: product?.category || '',
-    sizes: product?.sizes || [],
-    images: product?.images || [],
-  });
+  const [formData, setFormData] = useState<ProductInput>(() => buildFormData(product));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+
+  // Sync form state when the product being edited changes (modal reuse)
+  useEffect(() => {
+    setFormData(buildFormData(product));
+    setErrors({});
+  }, [product?.id]);
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -77,7 +89,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             required
           />
         </div>
-        
+
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Stock</label>
           <input
@@ -86,9 +98,23 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
             onChange={(e) => setFormData({ ...formData, stock: parseInt(e.target.value, 10) })}
             className="w-full px-3 py-2 border rounded-lg"
             min="0"
-            required
+            disabled={formData.unlimitedStock}
+            required={!formData.unlimitedStock}
           />
         </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="unlimitedStock"
+          checked={formData.unlimitedStock ?? false}
+          onChange={(e) => setFormData({ ...formData, unlimitedStock: e.target.checked })}
+          className="w-4 h-4 accent-blue-600"
+        />
+        <label htmlFor="unlimitedStock" className="text-sm font-medium text-gray-700">
+          Estoque ilimitado (dropshipping / fornecedor gerencia)
+        </label>
       </div>
       
       <div>
@@ -107,7 +133,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
         <input
           type="text"
           value={formData.sizes.join(', ')}
-          onChange={(e) => setFormData({ ...formData, sizes: e.target.value.split(',').map(s => s.trim()) })}
+          onChange={(e) => setFormData({ ...formData, sizes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
           className="w-full px-3 py-2 border rounded-lg"
           placeholder="P, M, G, GG"
           required
@@ -115,14 +141,10 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
       </div>
       
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Image URLs (comma-separated)</label>
-        <input
-          type="text"
-          value={formData.images.join(', ')}
-          onChange={(e) => setFormData({ ...formData, images: e.target.value.split(',').map(s => s.trim()) })}
-          className="w-full px-3 py-2 border rounded-lg"
-          placeholder="https://example.com/image1.jpg, https://example.com/image2.jpg"
-          required
+        <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
+        <ImageUpload
+          images={formData.images}
+          onChange={(images) => setFormData({ ...formData, images })}
         />
       </div>
       

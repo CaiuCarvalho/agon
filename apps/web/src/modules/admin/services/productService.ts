@@ -14,6 +14,23 @@ interface ProductListResult {
   pageSize: number;
 }
 
+function mapRow(p: any): Product {
+  return {
+    id: p.id,
+    name: p.name,
+    description: p.description,
+    price: p.price,
+    stock: p.stock,
+    unlimitedStock: p.unlimited_stock ?? false,
+    category: p.category,
+    sizes: p.sizes,
+    images: p.images,
+    deletedAt: p.deleted_at,
+    createdAt: p.created_at,
+    updatedAt: p.updated_at,
+  };
+}
+
 /**
  * Lists all products with pagination (includes soft-deleted products)
  */
@@ -21,12 +38,12 @@ export async function listProducts(page: number = 1): Promise<ServiceResult<Prod
   try {
     const supabase = await createClient();
     const offset = (page - 1) * PAGE_SIZE;
-    
+
     // Get total count (including soft-deleted)
     const { count, error: countError } = await supabase
       .from('products')
       .select('*', { count: 'exact', head: true });
-    
+
     if (countError) {
       return {
         success: false,
@@ -36,14 +53,14 @@ export async function listProducts(page: number = 1): Promise<ServiceResult<Prod
         },
       };
     }
-    
+
     // Get products with pagination
     const { data, error } = await supabase
       .from('products')
       .select('*')
       .order('created_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
-    
+
     if (error) {
       return {
         success: false,
@@ -53,25 +70,11 @@ export async function listProducts(page: number = 1): Promise<ServiceResult<Prod
         },
       };
     }
-    
-    const products: Product[] = data.map(p => ({
-      id: p.id,
-      name: p.name,
-      description: p.description,
-      price: p.price,
-      stock: p.stock,
-      category: p.category,
-      sizes: p.sizes,
-      images: p.images,
-      deletedAt: p.deleted_at,
-      createdAt: p.created_at,
-      updatedAt: p.updated_at,
-    }));
-    
+
     return {
       success: true,
       data: {
-        products,
+        products: data.map(mapRow),
         total: count || 0,
         page,
         pageSize: PAGE_SIZE,
@@ -106,9 +109,9 @@ export async function createProduct(input: ProductInput): Promise<ServiceResult<
         },
       };
     }
-    
+
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase
       .from('products')
       .insert({
@@ -116,13 +119,14 @@ export async function createProduct(input: ProductInput): Promise<ServiceResult<
         description: input.description,
         price: input.price,
         stock: input.stock,
+        unlimited_stock: input.unlimitedStock ?? false,
         category: input.category,
         sizes: input.sizes,
         images: input.images,
       })
       .select()
       .single();
-    
+
     if (error) {
       return {
         success: false,
@@ -132,23 +136,8 @@ export async function createProduct(input: ProductInput): Promise<ServiceResult<
         },
       };
     }
-    
-    return {
-      success: true,
-      data: {
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        stock: data.stock,
-        category: data.category,
-        sizes: data.sizes,
-        images: data.images,
-        deletedAt: data.deleted_at,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      },
-    };
+
+    return { success: true, data: mapRow(data) };
   } catch (error) {
     console.error('[Product Service] Create error:', error);
     return {
@@ -178,9 +167,9 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
         },
       };
     }
-    
+
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase
       .from('products')
       .update({
@@ -188,6 +177,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
         description: input.description,
         price: input.price,
         stock: input.stock,
+        unlimited_stock: input.unlimitedStock ?? false,
         category: input.category,
         sizes: input.sizes,
         images: input.images,
@@ -196,7 +186,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) {
       return {
         success: false,
@@ -206,23 +196,8 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
         },
       };
     }
-    
-    return {
-      success: true,
-      data: {
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        stock: data.stock,
-        category: data.category,
-        sizes: data.sizes,
-        images: data.images,
-        deletedAt: data.deleted_at,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      },
-    };
+
+    return { success: true, data: mapRow(data) };
   } catch (error) {
     console.error('[Product Service] Update error:', error);
     return {
@@ -241,14 +216,14 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
 export async function toggleProduct(id: string): Promise<ServiceResult<Product>> {
   try {
     const supabase = await createClient();
-    
+
     // Get current product
     const { data: current, error: fetchError } = await supabase
       .from('products')
       .select('deleted_at')
       .eq('id', id)
       .single();
-    
+
     if (fetchError) {
       return {
         success: false,
@@ -258,10 +233,10 @@ export async function toggleProduct(id: string): Promise<ServiceResult<Product>>
         },
       };
     }
-    
+
     // Toggle deleted_at
     const newDeletedAt = current.deleted_at ? null : new Date().toISOString();
-    
+
     const { data, error } = await supabase
       .from('products')
       .update({
@@ -271,7 +246,7 @@ export async function toggleProduct(id: string): Promise<ServiceResult<Product>>
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) {
       return {
         success: false,
@@ -281,23 +256,8 @@ export async function toggleProduct(id: string): Promise<ServiceResult<Product>>
         },
       };
     }
-    
-    return {
-      success: true,
-      data: {
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        stock: data.stock,
-        category: data.category,
-        sizes: data.sizes,
-        images: data.images,
-        deletedAt: data.deleted_at,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      },
-    };
+
+    return { success: true, data: mapRow(data) };
   } catch (error) {
     console.error('[Product Service] Toggle error:', error);
     return {
@@ -327,9 +287,9 @@ export async function updateStock(id: string, input: StockUpdateInput): Promise<
         },
       };
     }
-    
+
     const supabase = await createClient();
-    
+
     const { data, error } = await supabase
       .from('products')
       .update({
@@ -339,7 +299,7 @@ export async function updateStock(id: string, input: StockUpdateInput): Promise<
       .eq('id', id)
       .select()
       .single();
-    
+
     if (error) {
       return {
         success: false,
@@ -349,23 +309,8 @@ export async function updateStock(id: string, input: StockUpdateInput): Promise<
         },
       };
     }
-    
-    return {
-      success: true,
-      data: {
-        id: data.id,
-        name: data.name,
-        description: data.description,
-        price: data.price,
-        stock: data.stock,
-        category: data.category,
-        sizes: data.sizes,
-        images: data.images,
-        deletedAt: data.deleted_at,
-        createdAt: data.created_at,
-        updatedAt: data.updated_at,
-      },
-    };
+
+    return { success: true, data: mapRow(data) };
   } catch (error) {
     console.error('[Product Service] Update stock error:', error);
     return {

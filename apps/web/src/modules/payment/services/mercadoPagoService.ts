@@ -259,12 +259,14 @@ export const mercadoPagoService = {
         failure: `${appUrl}/pedido/falha?order_id=${orderId}`,
         pending: `${appUrl}/pedido/pendente?order_id=${orderId}`,
       },
+      auto_return: 'approved', // Auto-redirect to success page after credit card payment approval
       external_reference: orderId,
       notification_url: `${appUrl}/api/webhooks/mercadopago`,
       statement_descriptor: 'AGON MVP',
       payment_methods: {
-        excluded_payment_types: [], // Allow all payment methods
-        installments: 12, // Allow up to 12 installments
+        // Not passing excluded_payment_types so all methods are available:
+        // credit card, debit card, PIX, and boleto
+        installments: 12, // Max installments for credit card
       },
     };
   },

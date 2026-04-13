@@ -8,7 +8,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
 
 ## Tarefas
 
-- [ ] 1. Configurar schema do banco de dados e políticas RLS
+- [x] 1. Configurar schema do banco de dados e políticas RLS
   - Criar tabela `payments` com relacionamento 1:1 com `orders`
   - Criar índices para performance (mercadopago_payment_id, mercadopago_preference_id, order_id)
   - Implementar políticas RLS para proteger dados de pagamento
@@ -16,8 +16,8 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Atualizar constraint de `payment_method` na tabela `orders` para incluir métodos do Mercado Pago
   - _Requisitos: 1.1-1.13, 2.1-2.4_
 
-- [ ] 2. Criar funções RPC para operações atômicas
-  - [ ] 2.1 Implementar função `create_order_with_payment_atomic`
+- [x] 2. Criar funções RPC para operações atômicas
+  - [x] 2.1 Implementar função `create_order_with_payment_atomic`
     - Validar carrinho não vazio
     - Criar registro de pedido
     - Processar itens do carrinho com validação de estoque
@@ -26,7 +26,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
     - Retornar dados do pedido e pagamento em formato JSON
     - _Requisitos: 16.1-16.7, 5.1-5.2_
   
-  - [ ] 2.2 Implementar função `update_payment_from_webhook`
+  - [x] 2.2 Implementar função `update_payment_from_webhook`
     - Buscar pagamento por mercadopago_payment_id
     - Atualizar status do pagamento e payment_method
     - Mapear status de pagamento para status de pedido (approved→processing, rejected→cancelled)
@@ -35,7 +35,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
     - Garantir idempotência para reenvios de webhook
     - _Requisitos: 8.1-8.11, 9.1-9.6, 10.1-10.4_
 
-- [ ] 3. Configurar variáveis de ambiente e SDK do Mercado Pago
+- [x] 3. Configurar variáveis de ambiente e SDK do Mercado Pago
   - Adicionar variáveis ao `.env.example`: MERCADOPAGO_ACCESS_TOKEN, MERCADOPAGO_WEBHOOK_SECRET, NEXT_PUBLIC_APP_URL
   - Instalar pacote npm `mercadopago` (versão ^2.0.0)
   - Criar serviço `mercadoPagoService.ts` com inicialização singleton do SDK
@@ -43,8 +43,8 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Implementar tratamento de erro quando credenciais estão ausentes
   - _Requisitos: 3.1-3.7, 20.1-20.6_
 
-- [ ] 4. Implementar serviço Mercado Pago
-  - [ ] 4.1 Implementar criação de preferências de pagamento
+- [x] 4. Implementar serviço Mercado Pago
+  - [x] 4.1 Implementar criação de preferências de pagamento
     - Criar método `createPreference` usando SDK do Mercado Pago
     - Construir objeto de preferência com items, payer, back_urls, notification_url
     - Incluir external_reference (order_id) e statement_descriptor
@@ -53,13 +53,13 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
     - Implementar tratamento de erros com mensagens claras
     - _Requisitos: 4.1-4.11_
   
-  - [ ] 4.2 Implementar busca de detalhes de pagamento
+  - [x] 4.2 Implementar busca de detalhes de pagamento
     - Criar método `getPaymentDetails` usando SDK do Mercado Pago
     - Extrair status, payment_method_id, external_reference
     - Implementar tratamento de erros (pagamento não encontrado, timeout)
     - _Requisitos: 8.1-8.5_
   
-  - [ ] 4.3 Implementar validação de assinatura de webhook
+  - [x] 4.3 Implementar validação de assinatura de webhook
     - Criar método `validateWebhookSignature` com HMAC-SHA256
     - Extrair ts e v1 do header x-signature
     - Construir manifest string: `id:{data.id};request-id:{x-request-id};ts:{ts};`
@@ -67,7 +67,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
     - Comparar hashes usando `crypto.timingSafeEqual` (constant-time)
     - _Requisitos: 7.1-7.9_
   
-  - [ ] 4.4 Implementar construtor de preferência a partir de pedido
+  - [x] 4.4 Implementar construtor de preferência a partir de pedido
     - Criar método `buildPreferenceRequest` que transforma Order em PreferenceRequest
     - Mapear order_items para items array do Mercado Pago
     - Extrair DDD e número do telefone formatado brasileiro
@@ -75,7 +75,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
     - Configurar notification_url com NEXT_PUBLIC_APP_URL
     - _Requisitos: 4.2-4.9, 21.1-21.6_
 
-- [ ] 5. Implementar serviço de pagamentos (paymentService)
+- [x] 5. Implementar serviço de pagamentos (paymentService)
   - Criar método `getPaymentByOrderId` para buscar pagamento por order_id
   - Criar método `getPaymentByMercadoPagoId` para buscar por mercadopago_payment_id
   - Criar método `getPaymentByPreferenceId` para buscar por preference_id
@@ -85,7 +85,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Implementar tratamento de erros (not found, database errors)
   - _Requisitos: 8.1-8.11, 22.1-22.6_
 
-- [ ] 6. Implementar serviço ViaCEP
+- [x] 6. Implementar serviço ViaCEP
   - Criar `viaCEPService.ts` com método `fetchAddressByCEP`
   - Validar formato de CEP (8 dígitos)
   - Fazer requisição GET para `https://viacep.com.br/ws/{cep}/json/`
@@ -95,7 +95,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Criar métodos auxiliares: `validateCEP`, `formatCEP`
   - _Requisitos: 14.3-14.6, 27.3_
 
-- [ ] 7. Implementar serviço de validação brasileira
+- [x] 7. Implementar serviço de validação brasileira
   - Criar `validationService.ts` com validações de formatos brasileiros
   - Implementar `validateCEP` com formatação XXXXX-XXX
   - Implementar `validatePhone` com formatação (XX) XXXXX-XXXX ou (XX) XXXX-XXXX
@@ -104,7 +104,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Implementar `sanitizeInput` para remover caracteres perigosos
   - _Requisitos: 15.1-15.7_
 
-- [ ] 8. Criar schemas de validação Zod
+- [x] 8. Criar schemas de validação Zod
   - Criar `paymentStatusSchema` com enum de status válidos
   - Criar `mercadopagoPaymentMethodSchema` com métodos de pagamento
   - Criar `shippingFormSchema` com validações brasileiras (CEP, telefone, estado)
@@ -113,7 +113,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Criar `cepSchema` e `phoneSchema` com transformações de formatação
   - _Requisitos: 14.7-14.11, 15.1-15.7_
 
-- [ ] 9. Implementar componente ShippingForm
+- [x] 9. Implementar componente ShippingForm
   - Criar formulário com react-hook-form e zodResolver
   - Adicionar campos: nome, CEP, endereço, cidade, estado, telefone, email
   - Implementar auto-fill de CEP usando ViaCEP no evento onBlur
@@ -124,7 +124,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Implementar select de estados com lista de estados brasileiros
   - _Requisitos: 14.1-14.11_
 
-- [ ] 10. Implementar componente PaymentMethodsDisplay
+- [x] 10. Implementar componente PaymentMethodsDisplay
   - Criar componente para exibir métodos de pagamento disponíveis
   - Adicionar ícones para: Cartão de Crédito, Cartão de Débito, PIX, Boleto
   - Exibir logo do Mercado Pago
@@ -133,8 +133,8 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Implementar layout responsivo (grid 2 colunas mobile, 4 desktop)
   - _Requisitos: 19.1-19.5_
 
-- [ ] 11. Atualizar página de checkout
-  - [ ] 11.1 Atualizar CheckoutPage (server component)
+- [x] 11. Atualizar página de checkout
+  - [x] 11.1 Atualizar CheckoutPage (server component)
     - Verificar autenticação do usuário
     - Buscar itens do carrinho do Supabase
     - Redirecionar para /cart se carrinho vazio
@@ -142,7 +142,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
     - Passar userEmail e userId para componente cliente
     - _Requisitos: 5.1-5.2_
   
-  - [ ] 11.2 Criar CheckoutPageClient (client component)
+  - [x] 11.2 Criar CheckoutPageClient (client component)
     - Renderizar ShippingForm com integração ViaCEP
     - Renderizar CartSummary com itens do carrinho
     - Renderizar PaymentMethodsDisplay
@@ -152,7 +152,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
     - Exibir toast de erro em caso de falha
     - _Requisitos: 5.3-5.7, 17.1-17.8, 24.1-24.8_
 
-- [ ] 12. Criar API route para criação de pedido com pagamento
+- [x] 12. Criar API route para criação de pedido com pagamento
   - Criar `/api/checkout/create-order/route.ts`
   - Validar autenticação do usuário
   - Validar dados do formulário com Zod
@@ -164,8 +164,8 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Retornar erros específicos (estoque insuficiente, erro Mercado Pago, erro de rede)
   - _Requisitos: 4.1-4.11, 5.1-5.7, 16.1-16.7, 17.1-17.8_
 
-- [ ] 13. Implementar webhook endpoint
-  - [ ] 13.1 Criar `/api/webhooks/mercadopago/route.ts`
+- [x] 13. Implementar webhook endpoint
+  - [x] 13.1 Criar `/api/webhooks/mercadopago/route.ts`
     - Aceitar apenas método POST
     - Extrair headers: x-signature, x-request-id
     - Extrair body: data.id (payment_id), type (topic)
@@ -174,7 +174,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
     - Retornar 200 se topic não for 'payment'
     - _Requisitos: 6.1-6.9, 7.1-7.9_
   
-  - [ ] 13.2 Implementar processamento de pagamento no webhook
+  - [x] 13.2 Implementar processamento de pagamento no webhook
     - Buscar detalhes do pagamento do Mercado Pago
     - Extrair status, payment_method_id, external_reference
     - Chamar paymentService.updatePaymentFromWebhook
@@ -192,7 +192,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Verificar limpeza de carrinho após pagamento aprovado
   - Garantir que todos os testes passam, perguntar ao usuário se há dúvidas
 
-- [ ] 15. Implementar página de sucesso (/pedido/confirmado)
+- [x] 15. Implementar página de sucesso (/pedido/confirmado)
   - Criar server component que busca dados de pagamento e pedido
   - Extrair payment_id ou order_id dos query params
   - Buscar payment e order do Supabase com join
@@ -202,7 +202,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Exibir 404 se pagamento não encontrado
   - _Requisitos: 11.1-11.13_
 
-- [ ] 16. Criar componente OrderConfirmationClient
+- [x] 16. Criar componente OrderConfirmationClient
   - Exibir badge de status (Aprovado, Pendente, Rejeitado) com cores apropriadas
   - Exibir número do pedido (primeiros 8 caracteres do order_id)
   - Exibir método de pagamento usado
@@ -214,14 +214,14 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Adicionar botão "Continuar Comprando" que redireciona para /products
   - _Requisitos: 11.4-11.12_
 
-- [ ] 17. Implementar página de pagamento pendente (/pedido/pendente)
+- [x] 17. Implementar página de pagamento pendente (/pedido/pendente)
   - Criar server component que busca dados de pagamento
   - Extrair payment_id dos query params
   - Buscar payment e order do Supabase
   - Renderizar PendingPaymentClient com dados
   - _Requisitos: 12.1-12.8_
 
-- [ ] 18. Criar componente PendingPaymentClient
+- [x] 18. Criar componente PendingPaymentClient
   - Exibir mensagem específica baseada em payment_method:
     - PIX: "Aguardando pagamento do PIX. Você receberá confirmação por email."
     - Boleto: "Boleto gerado. Pague até a data de vencimento para confirmar seu pedido."
@@ -230,14 +230,14 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Adicionar botão "Voltar para Produtos"
   - _Requisitos: 12.3-12.8_
 
-- [ ] 19. Implementar página de falha de pagamento (/pedido/falha)
+- [x] 19. Implementar página de falha de pagamento (/pedido/falha)
   - Criar server component que busca dados de pagamento
   - Extrair payment_id dos query params
   - Buscar payment e order do Supabase
   - Renderizar FailurePaymentClient com dados
   - _Requisitos: 13.1-13.6_
 
-- [ ] 20. Criar componente FailurePaymentClient
+- [x] 20. Criar componente FailurePaymentClient
   - Exibir mensagem de erro: "Não foi possível processar seu pagamento."
   - Listar possíveis razões: cartão recusado, saldo insuficiente, dados incorretos
   - Adicionar botão "Tentar Novamente" que redireciona para /checkout
@@ -245,7 +245,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Manter pedido com status 'pending' (não deletar)
   - _Requisitos: 13.2-13.6_
 
-- [ ] 21. Implementar TypeScript interfaces e types
+- [x] 21. Implementar TypeScript interfaces e types
   - Criar interfaces: Payment, PreferenceRequest, PreferenceResponse, MercadoPagoPayment
   - Criar interfaces: WebhookNotification, WebhookSignature
   - Criar interfaces: CreateOrderWithPaymentRequest, CreateOrderWithPaymentResponse
@@ -254,7 +254,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Criar interfaces: PaymentRow, ShippingFormValues
   - Organizar em arquivo `contracts.ts` ou `types.ts`
 
-- [ ] 22. Adicionar tratamento de erros e logging
+- [x] 22. Adicionar tratamento de erros e logging
   - Implementar logging de criação de preferências (order_id, preference_id)
   - Implementar logging de recepção de webhooks (payment_id, status, timestamp)
   - Implementar logging de atualizações de status (old status, new status)
@@ -263,7 +263,7 @@ A arquitetura segue o padrão existente do projeto com três camadas: Data Layer
   - Usar formato estruturado (JSON) para logs
   - _Requisitos: 28.1-28.7_
 
-- [ ] 23. Implementar validação de variáveis de ambiente
+- [x] 23. Implementar validação de variáveis de ambiente
   - Criar função de validação usando mercadopagoEnvSchema
   - Validar no startup da aplicação (em middleware ou config)
   - Lançar erro claro se variáveis ausentes ou inválidas

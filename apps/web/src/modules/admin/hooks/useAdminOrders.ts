@@ -1,7 +1,7 @@
 // useAdminOrders Hook
 // Manages order state, filtering, and pagination
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import type { OrderWithDetails, PaymentStatus, ShippingStatus } from '../types';
 
 interface OrderListData {
@@ -22,57 +22,68 @@ export function useAdminOrders() {
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [filters, setFilters] = useState<OrderFilters>({});
-  
-  const fetchOrders = async (pageNum: number = page, newFilters: OrderFilters = filters) => {
+
+  // Refs hold the current page/filters so fetchOrders doesn't need them as deps
+  const pageRef = useRef(1);
+  const filtersRef = useRef<OrderFilters>({});
+
+  // Stable function — uses refs for defaults, no closure over page/filters state
+  const fetchOrders = useCallback(async (pageNum?: number, newFilters?: OrderFilters) => {
+    const actualPage = pageNum ?? pageRef.current;
+    const actualFilters = newFilters ?? filtersRef.current;
+
     try {
       setLoading(true);
       setError(null);
-      
+
       const params = new URLSearchParams({
-        page: pageNum.toString(),
+        page: actualPage.toString(),
       });
-      
-      if (newFilters.paymentStatus) {
-        params.append('paymentStatus', newFilters.paymentStatus);
+
+      if (actualFilters.paymentStatus) {
+        params.append('paymentStatus', actualFilters.paymentStatus);
       }
-      if (newFilters.shippingStatus) {
-        params.append('shippingStatus', newFilters.shippingStatus);
+      if (actualFilters.shippingStatus) {
+        params.append('shippingStatus', actualFilters.shippingStatus);
       }
-      
+
       const response = await fetch(`/api/admin/orders?${params.toString()}`);
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to fetch orders');
       }
-      
+
       const result = await response.json();
       setData(result);
-      setPage(pageNum);
-      setFilters(newFilters);
+      setPage(actualPage);
+      setFilters(actualFilters);
+      pageRef.current = actualPage;
+      filtersRef.current = actualFilters;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setLoading(false);
     }
-  };
-  
-  const applyFilters = (newFilters: OrderFilters) => {
+  }, []); // empty deps — stable reference throughout component lifetime
+
+  const applyFilters = useCallback((newFilters: OrderFilters) => {
     fetchOrders(1, newFilters);
-  };
-  
-  const clearFilters = () => {
+  }, [fetchOrders]);
+
+  const clearFilters = useCallback(() => {
     fetchOrders(1, {});
-  };
-  
-  const refresh = () => {
-    fetchOrders(page, filters);
-  };
-  
+  }, [fetchOrders]);
+
+  // refresh() always uses the current page/filters from refs
+  const refresh = useCallback(() => {
+    fetchOrders();
+  }, [fetchOrders]);
+
   useEffect(() => {
     fetchOrders(1);
-  }, []);
-  
+  }, [fetchOrders]);
+
   return {
     orders: data?.orders || [],
     total: data?.total || 0,
