@@ -33,7 +33,7 @@ export async function listOrders(filters: OrderFiltersInput): Promise<ServiceRes
       };
     }
     
-    const { page, pageSize, paymentStatus, shippingStatus } = validation.data;
+    const { page, pageSize, paymentStatus, shippingStatus, search } = validation.data;
     const offset = (page - 1) * pageSize;
     
     // Use service role for admin panel reads.
@@ -90,7 +90,11 @@ export async function listOrders(filters: OrderFiltersInput): Promise<ServiceRes
     if (shippingStatus) {
       query = query.eq('shipping_status', shippingStatus);
     }
-    
+    if (search) {
+      const escaped = search.replace(/[%,()]/g, '');
+      query = query.or(`shipping_name.ilike.%${escaped}%,id.ilike.${escaped}%`);
+    }
+
     // Execute query with pagination
     const { data, error, count } = await query
       .order('created_at', { ascending: false })

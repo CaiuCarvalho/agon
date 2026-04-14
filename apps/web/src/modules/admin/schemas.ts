@@ -22,6 +22,7 @@ export const shippingUpdateSchema = z.object({
   shippingStatus: z.enum(['pending', 'processing', 'shipped', 'delivered']),
   trackingCode: z.string().optional(),
   carrier: z.string().optional(),
+  forceOverride: z.boolean().optional().default(false),
 }).refine(
   (data) => {
     if (data.shippingStatus === 'shipped' || data.shippingStatus === 'delivered') {
@@ -42,6 +43,7 @@ export const stockUpdateSchema = z.object({
 export const orderFiltersSchema = z.object({
   paymentStatus: z.enum(['pending', 'approved', 'rejected', 'cancelled', 'refunded', 'in_process']).optional(),
   shippingStatus: z.enum(['pending', 'processing', 'shipped', 'delivered']).optional(),
+  search: z.string().trim().min(1).max(200).optional(),
   page: z.number().int().min(1).default(1),
   pageSize: z.number().int().min(1).max(100).default(20),
 });

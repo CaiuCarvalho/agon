@@ -23,13 +23,15 @@ export async function GET(req: NextRequest) {
   const pageSize = parseInt(searchParams.get('pageSize') || '20', 10);
   const paymentStatus = searchParams.get('paymentStatus') || undefined;
   const shippingStatus = searchParams.get('shippingStatus') || undefined;
-  
+  const search = searchParams.get('search') || undefined;
+
   // Validate filters
   const validation = orderFiltersSchema.safeParse({
     page,
     pageSize,
     paymentStatus,
     shippingStatus,
+    search,
   });
   
   if (!validation.success) {

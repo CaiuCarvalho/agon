@@ -29,7 +29,7 @@ export async function updateShipping(
       };
     }
     
-    const { shippingStatus, trackingCode, carrier } = validation.data;
+    const { shippingStatus, trackingCode, carrier, forceOverride } = validation.data;
     
     const supabase = createAdminClient();
     
@@ -55,14 +55,9 @@ export async function updateShipping(
       };
     }
     
-    // Business Rule 1: Payment must be approved before shipping
+    // Business Rule 1: Payment must be approved before shipping (unless force override is set)
     const paymentStatus = (currentOrder.payments as any).status;
-    if (paymentStatus !== 'approved') {
-      console.error('[Fulfillment Service] Cannot ship unpaid order:', {
-        orderId,
-        paymentStatus,
-        timestamp: new Date().toISOString(),
-      });
+    if (paymentStatus !== 'approved' && !forceOverride) {
       return {
         success: false,
         error: {
@@ -70,6 +65,14 @@ export async function updateShipping(
           message: 'Cannot update shipping for unpaid order. Payment must be approved first.',
         },
       };
+    }
+    if (paymentStatus !== 'approved' && forceOverride) {
+      console.warn('[Fulfillment Service] Shipping updated with payment override:', {
+        orderId,
+        paymentStatus,
+        shippingStatus,
+        timestamp: new Date().toISOString(),
+      });
     }
     
     // Business Rule 2: Validate shipping status progression (no regression)
