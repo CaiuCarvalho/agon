@@ -3,6 +3,10 @@ import { NextResponse, type NextRequest } from 'next/server'
 import { isAdminRole } from '@/lib/auth/roles'
 
 export async function middleware(request: NextRequest) {
+  const startTime = Date.now();
+  const path = request.nextUrl.pathname;
+  console.log(`[MW] ${path} - START`);
+  
   try {
     let supabaseResponse = NextResponse.next({
       request,
@@ -40,6 +44,12 @@ export async function middleware(request: NextRequest) {
     const {
       data: { session },
     } = await Promise.race([sessionPromise, timeoutPromise]) as any
+    
+    const elapsed = Date.now() - startTime;
+    console.log(`[MW] ${path} - SESSION_CHECK: ${elapsed}ms, hasSession=${!!session}`);
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[MW] ${path} - SESSION_CHECK: ${elapsed}ms, hasSession=${!!session}`);
 
     // Proteger rotas /admin e /perfil
     if (
@@ -47,6 +57,7 @@ export async function middleware(request: NextRequest) {
         request.nextUrl.pathname.startsWith('/perfil')) &&
       !session
     ) {
+      console.log(`[MW] ${path} - REDIRECT to /login (no session)`);
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/login'
       redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
@@ -67,25 +78,30 @@ export async function middleware(request: NextRequest) {
       })
 
       if (!isAdmin) {
+        console.log(`[MW] ${path} - REDIRECT to / (not admin)`);
         return NextResponse.redirect(new URL('/', request.url))
       }
     }
 
+    console.log(`[MW] ${path} - ALLOW: ${Date.now() - startTime}ms`);
     return supabaseResponse
   } catch (error) {
-    console.error('[Middleware] Error:', error)
+    const elapsed = Date.now() - startTime;
+    console.error(`[MW] ${path} - ERROR after ${elapsed}ms:`, error);
 
     const isProtectedPath =
       request.nextUrl.pathname.startsWith('/admin') ||
       request.nextUrl.pathname.startsWith('/perfil')
 
     if (isProtectedPath) {
+      console.log(`[MW] ${path} - REDIRECT to /login (error on protected path)`);
       const redirectUrl = request.nextUrl.clone()
       redirectUrl.pathname = '/login'
       redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
       return NextResponse.redirect(redirectUrl)
     }
 
+    console.log(`[MW] ${path} - ALLOW (error on public path)`);
     return NextResponse.next()
   }
 }

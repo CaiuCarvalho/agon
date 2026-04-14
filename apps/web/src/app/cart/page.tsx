@@ -224,6 +224,7 @@ export default function CartPage() {
 
               <Link
                 href="/checkout"
+                onClick={() => console.log('[CART] Click: Finalizar Compra, items=', totalItems)}
                 className="w-full bg-primary text-white py-4 px-6 font-display text-sm uppercase tracking-widest hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 mb-4"
               >
                 Finalizar Compra
