@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Agon is a Brazilian e-commerce platform (sports apparel) built as a Turborepo monorepo with npm workspaces. The main application lives in `apps/web/` (Next.js 15 with App Router). `apps/api/` is a stub Fastify API. Shared code lives in `packages/`.
+Agon is a Brazilian e-commerce platform (sports apparel) built as a Turborepo monorepo with npm workspaces. The main application lives in `apps/web/` (Next.js 15 with App Router). `apps/api/` is a stub Fastify API (kept because nginx proxies `/api` → `localhost:3333`; do not delete without confirming the deploy pipeline). There are no shared `packages/` — they were removed as unused.
 
 ## Commands
 
@@ -62,7 +62,7 @@ The Supabase client is initialized per-request. There are two clients:
 
 ### Authentication & Middleware
 
-`apps/web/src/middleware.ts` protects routes using Supabase session checks with a 5-second timeout. Protected paths: `/admin`, `/perfil`, `/checkout`, `/pedido`.
+`apps/web/src/middleware.ts` protects routes using Supabase session checks with a 5-second timeout. Protected paths: `/admin`, `/perfil`, `/checkout`, `/pedido`. The middleware is lean — `console.log` request tracking was removed; only `console.error` remains for failures.
 
 Admin role is validated by checking both `profiles.role` and `user_metadata.role` in Supabase.
 
@@ -96,8 +96,11 @@ Copy `.env.example` to `.env.local` to get started.
 - **Supabase** — auth, database (PostgreSQL + RLS), realtime subscriptions
 - **Mercado Pago** — payment processing; webhook at `/api/webhooks/mercadopago`
 - **Cloudinary** — image hosting and upload presets
-- **Resend** — transactional email
+- **Resend** — transactional email (referenced in env schema; confirm active usage before removing)
+- **Google Tag Manager** — GTM snippet hardcoded in `apps/web/src/app/layout.tsx` (ID: `GTM-MCVPTPL3`); analytics.ts and GoogleAnalytics component were removed — tracking now goes through GTM only
 
 ## Monorepo Notes
 
-Turborepo caches `dist/` and `.next/` build outputs. `turbo.json` defines task dependencies (`build` depends on `^build`). Dev tasks have `cache: false`. TypeScript uses a shared base config at `tsconfig.base.json`; each workspace extends it.
+Turborepo caches `.next/` build outputs. `turbo.json` defines task dependencies (`build` depends on `^build`). Dev tasks have `cache: false`. TypeScript uses a shared base config at `tsconfig.base.json`; each workspace extends it.
+
+Workspaces: `apps/*` only. The `packages/` directory was removed (config, types, utils — all were empty stubs with zero imports).
