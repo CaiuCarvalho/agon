@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useCartMutations } from "@/modules/cart/hooks/useCartMutations";
 import { useWishlistMutations } from "@/modules/wishlist/hooks/useWishlistMutations";
 import { useWishlist } from "@/modules/wishlist/hooks/useWishlist";
-import { trackProductClick } from "@/lib/analytics";
 
 interface ProductCardProps {
   id?: string;
@@ -99,9 +98,6 @@ const ProductCard = ({ id = "1", image, title, price, badge, category = "Manto O
         <Link
           href={`/products/${id}`}
           className="block h-full w-full"
-          onClick={() =>
-            trackProductClick({ item_id: id, item_name: title, price, item_category: category })
-          }
         >
           <img
             src={image}

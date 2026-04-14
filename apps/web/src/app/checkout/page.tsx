@@ -59,6 +59,8 @@ export default async function CheckoutPage() {
       />
     );
   } catch (error) {
+    // Next.js redirect() throws internally — rethrow so the redirect is honored
+    if (error && typeof error === 'object' && 'digest' in error) throw error;
     console.error('[CHECKOUT] Unexpected error:', error);
     redirect('/cart');
   }

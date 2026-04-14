@@ -8,7 +8,6 @@ import { AuthProvider } from "@/context/AuthContext";
 import { QueryProvider } from "@/lib/react-query/QueryProvider";
 import { MigrationProgress } from "@/components/cart/MigrationProgress";
 import { RealtimeStatus } from "@/components/cart/RealtimeStatus";
-import GoogleAnalytics from "@/components/GoogleAnalytics";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -46,7 +45,6 @@ export default function RootLayout({
         />
         <QueryProvider>
           <AuthProvider>
-            <GoogleAnalytics />
             <MigrationProgress />
             <RealtimeStatus />
             {children}
