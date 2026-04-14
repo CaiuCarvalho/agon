@@ -48,9 +48,6 @@ export async function middleware(request: NextRequest) {
     const elapsed = Date.now() - startTime;
     console.log(`[MW] ${path} - SESSION_CHECK: ${elapsed}ms, hasSession=${!!session}`);
 
-    const elapsed = Date.now() - startTime;
-    console.log(`[MW] ${path} - SESSION_CHECK: ${elapsed}ms, hasSession=${!!session}`);
-
     // Proteger rotas /admin e /perfil
     if (
       (request.nextUrl.pathname.startsWith('/admin') ||
