@@ -44,16 +44,16 @@ export default function RootLayout({
             __html: `<iframe src="https://www.googletagmanager.com/ns.html?id=GTM-MCVPTPL3" height="0" width="0" style="display:none;visibility:hidden"></iframe>`
           }}
         />
-        <AuthProvider>
-          <QueryProvider>
+        <QueryProvider>
+          <AuthProvider>
             <GoogleAnalytics />
             <MigrationProgress />
             <RealtimeStatus />
             {children}
             <Toaster />
             <Sonner />
-          </QueryProvider>
-        </AuthProvider>
+          </AuthProvider>
+        </QueryProvider>
       </body>
     </html>
   );

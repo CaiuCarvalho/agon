@@ -14,6 +14,16 @@
 
 import { z } from 'zod';
 
+export class ConfigurationError extends Error {
+  readonly missingVars: string[];
+
+  constructor(message: string, missingVars: string[] = []) {
+    super(message);
+    this.name = 'ConfigurationError';
+    this.missingVars = missingVars;
+  }
+}
+
 /**
  * Schema for client-side (public) environment variables
  * These variables are safe to expose to the browser
@@ -45,6 +55,18 @@ const clientEnvSchema = z.object({
  * These variables must NEVER be exposed to the client
  */
 const serverEnvSchema = z.object({
+  SUPABASE_URL: z
+    .string()
+    .url('SUPABASE_URL must be a valid URL')
+    .startsWith('https://', 'SUPABASE_URL must use HTTPS')
+    .optional(),
+
+  SUPABASE_ANON_KEY: z
+    .string()
+    .min(1, 'SUPABASE_ANON_KEY is required')
+    .startsWith('eyJ', 'SUPABASE_ANON_KEY must be a valid JWT token')
+    .optional(),
+
   SUPABASE_SERVICE_ROLE_KEY: z
     .string()
     .min(1, 'SUPABASE_SERVICE_ROLE_KEY is required')
@@ -104,6 +126,8 @@ export function validateEnvironment(): void {
   } else {
     // SERVER-SIDE: Validate all variables
     const serverEnv = {
+      SUPABASE_URL: process.env.SUPABASE_URL,
+      SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
       NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
@@ -153,4 +177,82 @@ if (typeof window === 'undefined') {
       throw error;
     }
   }
+}
+
+type ResolvedSupabaseConfig = {
+  url: string;
+  anonKey: string;
+  serviceRoleKey?: string;
+};
+
+function getFirstDefinedEnv(envNames: string[]): string | undefined {
+  for (const envName of envNames) {
+    const value = process.env[envName];
+    if (typeof value === 'string' && value.length > 0) {
+      return value;
+    }
+  }
+  return undefined;
+}
+
+export function getSupabaseServerConfig(options?: {
+  requireServiceRole?: boolean;
+}): ResolvedSupabaseConfig {
+  const url = getFirstDefinedEnv(['SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_URL']);
+  const anonKey = getFirstDefinedEnv(['SUPABASE_ANON_KEY', 'NEXT_PUBLIC_SUPABASE_ANON_KEY']);
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  const missingVars: string[] = [];
+  if (!url) {
+    missingVars.push('SUPABASE_URL|NEXT_PUBLIC_SUPABASE_URL');
+  }
+  if (!anonKey) {
+    missingVars.push('SUPABASE_ANON_KEY|NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
+  if (options?.requireServiceRole && !serviceRoleKey) {
+    missingVars.push('SUPABASE_SERVICE_ROLE_KEY');
+  }
+
+  if (missingVars.length > 0) {
+    throw new ConfigurationError(
+      `Missing required Supabase environment variables: ${missingVars.join(', ')}`,
+      missingVars
+    );
+  }
+
+  return {
+    url: url!,
+    anonKey: anonKey!,
+    serviceRoleKey,
+  };
+}
+
+export function getCheckoutRuntimeConfig(): { appUrl: string; mercadoPagoAccessToken: string } {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+  const mercadoPagoAccessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const missingVars: string[] = [];
+
+  if (!appUrl) {
+    missingVars.push('NEXT_PUBLIC_APP_URL');
+  }
+
+  if (!mercadoPagoAccessToken) {
+    missingVars.push('MERCADOPAGO_ACCESS_TOKEN');
+  }
+
+  if (missingVars.length > 0) {
+    throw new ConfigurationError(
+      `Missing checkout environment variables: ${missingVars.join(', ')}`,
+      missingVars
+    );
+  }
+
+  return {
+    appUrl: appUrl!,
+    mercadoPagoAccessToken: mercadoPagoAccessToken!,
+  };
+}
+
+export function isConfigurationError(error: unknown): error is ConfigurationError {
+  return error instanceof ConfigurationError;
 }

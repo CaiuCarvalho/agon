@@ -4,7 +4,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { cartService } from '../services/cartService';
 import { localStorageService } from '../services/localStorageService';
-import { useCallback, useRef } from 'react';
+import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { CartItem, CartItemInput, CartItemIdentifier } from '../types';
 
@@ -41,6 +41,7 @@ export function useCartMutations() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const debounceTimers = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const [pendingRemovals, setPendingRemovals] = useState<Set<string>>(new Set());
 
   /**
    * Add to cart mutation
@@ -242,6 +243,7 @@ export function useCartMutations() {
     },
     onMutate: async (itemId) => {
       await queryClient.cancelQueries({ queryKey: ['cart', user?.id] });
+      setPendingRemovals((prev) => new Set(prev).add(itemId));
 
       const previousCart = queryClient.getQueryData<CartItem[]>(['cart', user?.id]);
 
@@ -262,6 +264,14 @@ export function useCartMutations() {
       toast.success('Produto removido do carrinho');
     },
     onSettled: () => {
+      const itemId = removeFromCartMutation.variables;
+      if (itemId) {
+        setPendingRemovals((prev) => {
+          const next = new Set(prev);
+          next.delete(itemId);
+          return next;
+        });
+      }
       queryClient.invalidateQueries({ queryKey: ['cart', user?.id] });
     },
   });
@@ -306,6 +316,7 @@ export function useCartMutations() {
     updateQuantityDebounced,
     cancelDebounce,
     removeFromCart: removeFromCartMutation.mutate,
+    isRemovingItem: (itemId: string) => pendingRemovals.has(itemId),
     clearCart: clearCartMutation.mutate,
     isAdding: addToCartMutation.isPending,
     isUpdating: updateCartItemMutation.isPending,

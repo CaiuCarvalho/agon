@@ -3,7 +3,8 @@
     "private": true,
     "scripts": {
         "dev": "next dev",
-        "build": "next build",
+        "check:env": "node ./scripts/check-env.mjs",
+        "build": "npm run check:env && next build",
         "start": "next start",
         "test": "vitest --run",
         "test:watch": "vitest",

@@ -1,7 +1,8 @@
 // Fulfillment Service
 // Handles shipping updates with business rule validation
 
-import { createClient } from '@/lib/supabase/server';
+import { isConfigurationError } from '@/lib/env';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { Order, ServiceResult, ShippingStatus } from '../types';
 import type { ShippingUpdateInput } from '../schemas';
 import { shippingUpdateSchema } from '../schemas';
@@ -30,7 +31,7 @@ export async function updateShipping(
     
     const { shippingStatus, trackingCode, carrier } = validation.data;
     
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     
     // Fetch current order with payment status
     const { data: currentOrder, error: fetchError } = await supabase
@@ -193,6 +194,18 @@ export async function updateShipping(
     };
   } catch (error) {
     console.error('[Fulfillment Service] Error:', error);
+
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {

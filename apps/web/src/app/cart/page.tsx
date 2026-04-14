@@ -9,7 +9,7 @@ import { motion } from "framer-motion";
 
 export default function CartPage() {
   const { items, totalItems, subtotal, isLoading } = useCart();
-  const { updateQuantityDebounced, removeFromCart, isRemoving } = useCartMutations();
+  const { updateQuantityDebounced, removeFromCart, isRemovingItem } = useCartMutations();
 
   // Show loading state during migration or initial load
   if (isLoading) {
@@ -159,7 +159,7 @@ export default function CartPage() {
                 {/* Remove Button */}
                 <button
                   onClick={() => removeFromCart(item.id)}
-                  disabled={isRemoving}
+                  disabled={isRemovingItem(item.id)}
                   className="self-start md:self-center p-2 hover:bg-destructive/10 hover:text-destructive transition-colors rounded disabled:opacity-50"
                   title="Remover do carrinho"
                 >

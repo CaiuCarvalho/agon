@@ -1,4 +1,5 @@
 import { createClient as createSupabaseClient } from '@supabase/supabase-js';
+import { ConfigurationError, getSupabaseServerConfig } from '@/lib/env';
 
 function parseJwtRole(token: string): string | null {
   try {
@@ -12,16 +13,11 @@ function parseJwtRole(token: string): string | null {
 }
 
 export function createAdminClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Missing Supabase admin credentials for server operation');
-  }
+  const { url: supabaseUrl, serviceRoleKey } = getSupabaseServerConfig({ requireServiceRole: true });
 
   const tokenRole = parseJwtRole(serviceRoleKey);
   if (tokenRole !== 'service_role') {
-    throw new Error(
+    throw new ConfigurationError(
       `Invalid SUPABASE_SERVICE_ROLE_KEY role: expected service_role, got ${tokenRole || 'unknown'}`
     );
   }

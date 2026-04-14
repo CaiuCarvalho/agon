@@ -1,7 +1,8 @@
 // Product Service
 // Provides product CRUD operations for admin panel
 
-import { createClient } from '@/lib/supabase/server';
+import { isConfigurationError } from '@/lib/env';
+import { createAdminClient } from '@/lib/supabase/admin';
 import type { Product, ServiceResult } from '../types';
 import type { ProductInput, StockUpdateInput } from '../schemas';
 import { productSchema, stockUpdateSchema } from '../schemas';
@@ -36,7 +37,7 @@ function mapRow(p: any): Product {
  */
 export async function listProducts(page: number = 1): Promise<ServiceResult<ProductListResult>> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
     const offset = (page - 1) * PAGE_SIZE;
 
     // Get total count (including soft-deleted)
@@ -82,6 +83,17 @@ export async function listProducts(page: number = 1): Promise<ServiceResult<Prod
     };
   } catch (error) {
     console.error('[Product Service] List error:', error);
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {
@@ -110,7 +122,7 @@ export async function createProduct(input: ProductInput): Promise<ServiceResult<
       };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from('products')
@@ -140,6 +152,17 @@ export async function createProduct(input: ProductInput): Promise<ServiceResult<
     return { success: true, data: mapRow(data) };
   } catch (error) {
     console.error('[Product Service] Create error:', error);
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {
@@ -168,7 +191,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
       };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from('products')
@@ -200,6 +223,17 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
     return { success: true, data: mapRow(data) };
   } catch (error) {
     console.error('[Product Service] Update error:', error);
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {
@@ -215,7 +249,7 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
  */
 export async function toggleProduct(id: string): Promise<ServiceResult<Product>> {
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // Get current product
     const { data: current, error: fetchError } = await supabase
@@ -260,6 +294,17 @@ export async function toggleProduct(id: string): Promise<ServiceResult<Product>>
     return { success: true, data: mapRow(data) };
   } catch (error) {
     console.error('[Product Service] Toggle error:', error);
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {
@@ -288,7 +333,7 @@ export async function updateStock(id: string, input: StockUpdateInput): Promise<
       };
     }
 
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from('products')
@@ -313,6 +358,17 @@ export async function updateStock(id: string, input: StockUpdateInput): Promise<
     return { success: true, data: mapRow(data) };
   } catch (error) {
     console.error('[Product Service] Update stock error:', error);
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {

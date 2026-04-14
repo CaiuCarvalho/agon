@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { createClient } from "@/lib/supabase/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { AuthContext } from "./auth-context";
@@ -26,6 +27,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const queryClient = useQueryClient();
   const supabase = createClient();
 
   const loadUserProfile = useCallback(async (userId: string) => {
@@ -74,6 +76,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
 
         if (event === "SIGNED_OUT") {
+          queryClient.clear();
           router.push("/login");
         }
       }
@@ -82,7 +85,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       subscription.unsubscribe();
     };
-  }, [supabase, router, initializeAuth, loadUserProfile]);
+  }, [supabase, router, initializeAuth, loadUserProfile, queryClient]);
 
   const login = useCallback(async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -117,17 +120,37 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     if (error) throw error;
 
-    if (data.user) {
-      const profile = await loadUserProfile(data.user.id);
+    if (data.session?.user) {
+      const profile = await loadUserProfile(data.session.user.id);
       setSession(data.session);
-      setUser(mapSupabaseUserToUserAuth(data.user, profile));
+      setUser(mapSupabaseUserToUserAuth(data.session.user, profile));
       
       router.refresh();
-      router.push("/");
+      router.push("/perfil");
+      return { requiresEmailConfirmation: false };
     }
+
+    if (data.user) {
+      const profile = await loadUserProfile(data.user.id);
+      setSession(null);
+      setUser(mapSupabaseUserToUserAuth(data.user, profile));
+
+      return { requiresEmailConfirmation: true };
+    }
+
+    return { requiresEmailConfirmation: false };
   }, [supabase, router, loadUserProfile]);
 
   const logout = useCallback(async () => {
+    const clearClientState = async () => {
+      setSession(null);
+      setUser(null);
+      await queryClient.cancelQueries();
+      queryClient.clear();
+      router.push("/login");
+      router.refresh();
+    };
+
     try {
       const { error } = await supabase.auth.signOut();
       if (error) {
@@ -135,19 +158,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw error;
       }
 
-      setSession(null);
-      setUser(null);
-      router.push("/login");
-      router.refresh();
+      await clearClientState();
     } catch (error) {
       console.error("Failed to logout:", error);
       // Force logout even if API call fails
-      setSession(null);
-      setUser(null);
-      router.push("/login");
-      router.refresh();
+      await clearClientState();
     }
-  }, [supabase, router]);
+  }, [supabase, router, queryClient]);
 
   const updateUser = useCallback(async (newData: Partial<UserAuth>) => {
     if (!user) return;

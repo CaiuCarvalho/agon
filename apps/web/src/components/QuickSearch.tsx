@@ -52,7 +52,7 @@ export default function QuickSearch({ isOpen, query, results, isLoading, onClose
                         >
                           <div className="relative h-20 w-20 flex-shrink-0 overflow-hidden rounded-2xl bg-muted/20 border border-border/10">
                             <img 
-                              src={product.imageUrl || "/placeholder-product.webp"} 
+                              src={product.imageUrl || "/products/product-jersey.jpg"} 
                               alt={product.name}
                               className="h-full w-full object-cover group-hover:scale-110 transition-transform duration-500"
                             />

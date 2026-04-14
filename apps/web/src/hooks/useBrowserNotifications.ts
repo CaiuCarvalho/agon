@@ -69,7 +69,7 @@ export function useBrowserNotifications() {
     try {
       const notification = new Notification('Novo Pedido Aprovado!', {
         body: `Pedido #${orderNumber} - ${amount}`,
-        icon: '/logo.png',
+        icon: '/images/ui/world-cup-trophy.jpg',
         tag: `order-${order.id}`,
         requireInteraction: false,
         data: { orderId: order.id }

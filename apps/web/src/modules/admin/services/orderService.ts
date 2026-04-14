@@ -2,6 +2,7 @@
 // Provides order listing and details for admin panel
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isConfigurationError } from '@/lib/env';
 import type { OrderWithDetails, ServiceResult } from '../types';
 import type { OrderFiltersInput } from '../schemas';
 import { orderFiltersSchema } from '../schemas';
@@ -174,6 +175,18 @@ export async function listOrders(filters: OrderFiltersInput): Promise<ServiceRes
     };
   } catch (error) {
     console.error('[Order Service] Error:', error);
+
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {
@@ -307,6 +320,18 @@ export async function getOrderDetails(id: string): Promise<ServiceResult<OrderWi
     };
   } catch (error) {
     console.error('[Order Service] Get details error:', error);
+
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {

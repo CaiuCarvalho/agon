@@ -8,9 +8,11 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { mercadoPagoService } from '@/modules/payment/services/mercadoPagoService';
 import { shippingFormSchema } from '@/modules/payment/contracts';
 import type { CreateOrderWithPaymentResponse } from '@/modules/payment/types';
+import { createOrderFromCart } from '@/modules/checkout/services/createOrderFromCart';
 
 export async function POST(request: NextRequest) {
   console.log('========================================');
@@ -93,21 +95,20 @@ export async function POST(request: NextRequest) {
     // 3. Create order with payment atomically (without preference_id yet)
     const orderTimestamp = new Date().toISOString();
     console.log(`[${orderTimestamp}] [CHECKOUT] Step 5: Creating order in database...`);
-    const { data: rpcResult, error: rpcError } = await supabase.rpc(
-      'create_order_with_payment_atomic',
-      {
-        p_user_id: user.id,
-        p_shipping_name: validatedShipping.shippingName,
-        p_shipping_address: validatedShipping.shippingAddress,
-        p_shipping_city: validatedShipping.shippingCity,
-        p_shipping_state: validatedShipping.shippingState,
-        p_shipping_zip: validatedShipping.shippingZip,
-        p_shipping_phone: validatedShipping.shippingPhone,
-        p_shipping_email: validatedShipping.shippingEmail,
-        p_payment_method: 'mercadopago_credit_card',
-        p_mercadopago_preference_id: 'temp', // Temporary, will be updated
-      }
-    );
+    const orderResult: any = await createOrderFromCart({
+      supabase,
+      userId: user.id,
+      shipping: {
+        shippingName: validatedShipping.shippingName,
+        shippingAddress: validatedShipping.shippingAddress,
+        shippingCity: validatedShipping.shippingCity,
+        shippingState: validatedShipping.shippingState,
+        shippingZip: validatedShipping.shippingZip,
+        shippingPhone: validatedShipping.shippingPhone,
+        shippingEmail: validatedShipping.shippingEmail,
+      },
+    });
+    const rpcError = false;
     
     if (rpcError) {
       const errorTimestamp = new Date().toISOString();
@@ -119,9 +120,11 @@ export async function POST(request: NextRequest) {
     }
     console.log(`[${orderTimestamp}] [CHECKOUT] ✓ Order created in database`);
     
-    const orderResult = rpcResult as any;
+    // orderResult already set from createOrderFromCart
     
     if (!orderResult.success) {
+      const createOrderError =
+        'error' in orderResult ? orderResult.error : 'Erro ao criar pedido';
       const errorTimestamp = new Date().toISOString();
       console.error(`[${errorTimestamp}] [CHECKOUT] ✗ Order creation failed:`, orderResult.error);
       return NextResponse.json(
@@ -210,10 +213,17 @@ export async function POST(request: NextRequest) {
       console.log(`[${rollbackTimestamp}] [CHECKOUT] Step 9: Rolling back order...`);
       
       try {
+        let rollbackClient = supabase;
+        try {
+          rollbackClient = createAdminClient() as any;
+        } catch {
+          // Keep authenticated client when service role is unavailable.
+        }
+
         // Rollback: delete order and payment
-        await supabase.from('payments').delete().eq('id', orderResult.payment_id);
-        await supabase.from('order_items').delete().eq('order_id', orderResult.order_id);
-        await supabase.from('orders').delete().eq('id', orderResult.order_id);
+        await rollbackClient.from('payments').delete().eq('id', orderResult.payment_id);
+        await rollbackClient.from('order_items').delete().eq('order_id', orderResult.order_id);
+        await rollbackClient.from('orders').delete().eq('id', orderResult.order_id);
         
         const rollbackDuration = Date.now() - rollbackStartTime;
         const rollbackCompleteTimestamp = new Date().toISOString();

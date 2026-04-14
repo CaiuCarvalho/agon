@@ -2,6 +2,7 @@
 // Provides dashboard metrics calculation and data fetching
 
 import { createAdminClient } from '@/lib/supabase/admin';
+import { isConfigurationError } from '@/lib/env';
 import type { DashboardMetrics, OrderSummary, ServiceResult } from '../types';
 
 /**
@@ -117,6 +118,18 @@ export async function getDashboardMetrics(): Promise<ServiceResult<DashboardMetr
     };
   } catch (error) {
     console.error('[Dashboard Service] Error:', error);
+
+    if (isConfigurationError(error)) {
+      return {
+        success: false,
+        error: {
+          code: 'CONFIG_ERROR',
+          message: error.message,
+          details: { env: error.missingVars },
+        },
+      };
+    }
+
     return {
       success: false,
       error: {

@@ -46,7 +46,11 @@ export function RegisterForm({ onToggleToLogin }: RegisterFormProps) {
     setIsLoading(true);
 
     try {
-      await signup(data.email, data.password, data.name);
+      const result = await signup(data.email, data.password, data.name);
+      if (result.requiresEmailConfirmation) {
+        toast.success("Cadastro criado! Confirme seu e-mail para entrar.");
+        return;
+      }
       toast.success("Bem-vindo à Torcida Agon! Aproveite seu manto.");
     } catch (error) {
       if (error instanceof Error) {
