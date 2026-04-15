@@ -5,7 +5,7 @@ import * as path from 'path';
 
 interface AuditIssue {
   severity: 'CRITICAL' | 'MEDIUM' | 'LOW';
-  category: 'Segurança' | 'Arquitetura' | 'Contratos' | 'Documentação' | 'Anti-pattern';
+  category: 'Segurança' | 'Contratos' | 'Anti-pattern';
   message: string;
   file?: string;
   line?: number;
