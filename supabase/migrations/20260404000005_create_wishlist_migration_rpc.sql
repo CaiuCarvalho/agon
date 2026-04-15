@@ -57,4 +57,3 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Add comment for documentation
-COMMENT ON FUNCTION migrate_wishlist_items(UUID, JSONB) IS 'Atomically migrates wishlist items from localStorage to database with 20-item limit enforcement';

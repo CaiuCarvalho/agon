@@ -67,4 +67,3 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Add comment for documentation
-COMMENT ON FUNCTION migrate_cart_items(UUID, JSONB) IS 'Atomically migrates cart items from localStorage to database with automatic rollback on failure';

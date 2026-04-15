@@ -112,5 +112,3 @@ COMMENT ON COLUMN orders.tracking_code IS 'Tracking code from carrier (required 
 COMMENT ON COLUMN orders.carrier IS 'Carrier name (free text, e.g., Correios, Jadlog)';
 COMMENT ON COLUMN orders.shipped_at IS 'Timestamp when order was marked as shipped';
 COMMENT ON COLUMN orders.status IS 'Derived summary status (auto-updated by trigger from payment + shipping)';
-COMMENT ON FUNCTION derive_order_status IS 'Derives orders.status from payments.status + orders.shipping_status';
-COMMENT ON FUNCTION assert_single_payment_per_order IS 'Defensive check: validates 1:1 order-payment relationship. MUST be called in update_payment_from_webhook RPC before updating payment status.';
