@@ -25,7 +25,11 @@ import { describe, it, expect, beforeAll } from 'vitest';
 import { getProducts } from '@/modules/products/services/productService';
 import { createClient } from '@/lib/supabase/client';
 
-describe('Bug Condition Exploration: Products Query Timeout on Cold Start', () => {
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const hasSupabaseEnv = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
+
+describe.skipIf(!hasSupabaseEnv)('Bug Condition Exploration: Products Query Timeout on Cold Start', () => {
   let supabase: ReturnType<typeof createClient>;
 
   beforeAll(() => {
