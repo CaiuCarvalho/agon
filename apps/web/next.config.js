@@ -2,6 +2,13 @@
 const nextConfig = {
     images: {
         remotePatterns: [
+            // Supabase Storage (qualquer projeto — cobre migração de região)
+            {
+                protocol: "https",
+                hostname: "*.supabase.co",
+                pathname: "/storage/v1/object/public/**",
+            },
+            // Cloudinary (manter enquanto houver imagens legadas)
             {
                 protocol: "https",
                 hostname: "res.cloudinary.com",
