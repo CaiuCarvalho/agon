@@ -12,6 +12,9 @@ git reset --hard origin/main
 echo "Instalando dependencias..."
 npm ci
 
+echo "Limpando cache de build..."
+rm -rf .turbo apps/web/.next
+
 echo "Buildando projeto..."
 npm run build
 
