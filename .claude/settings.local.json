@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /c/Users/caiul/OneDrive/Documentos/projetos/agon remote -v)",
+      "Bash(claude plugin:*)",
+      "Bash(npx tsc:*)",
+      "Bash(cat src/modules/admin/components/Fulfillment/ShippingStatusBadge.tsx)",
+      "Bash(cat src/modules/admin/components/Fulfillment/TrackingDisplay.tsx)",
+      "Bash(cat src/modules/admin/constants.ts)",
+      "Bash(ls src/modules/admin/services/*.test.*)"
+    ]
+  }
+}

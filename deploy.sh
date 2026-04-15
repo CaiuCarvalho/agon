@@ -1,21 +1,23 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-echo "🚀 Iniciando deploy do Agon..."
+echo "Iniciando deploy do Agon..."
 
 cd /var/www/agon/app
 
-echo "📥 Baixando atualizações..."
-git pull origin main
+echo "Baixando atualizacoes..."
+git fetch origin main
+git reset --hard origin/main
 
-echo "📦 Instalando dependências..."
-npm install
+echo "Instalando dependencias..."
+npm ci
 
-echo "🔨 Buildando projeto..."
+echo "Buildando projeto..."
 npm run build
 
-echo "♻️  Reiniciando aplicação..."
-pm2 restart agon-web || pm2 start npm --name agon-web -- run start --prefix apps/web
+echo "Recarregando aplicacao..."
+pm2 reload agon-web --update-env || pm2 start npm --name agon-web -- run start --prefix apps/web
+pm2 save
 
-echo "✅ Deploy concluído!"
+echo "Deploy concluido."
 pm2 status
