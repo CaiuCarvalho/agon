@@ -28,7 +28,6 @@ export const mercadopagoPaymentMethodSchema = z.enum([
   'credit_card',
   'debit_card',
   'pix',
-  'boleto',
   'account_money'
 ]);
 
