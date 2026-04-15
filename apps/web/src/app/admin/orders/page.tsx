@@ -1,5 +1,5 @@
-import { OrdersPage } from '@/modules/admin/components/Orders/OrdersPage';
+import { OrdersSplitView } from '@/modules/admin/components/Orders/OrdersSplitView';
 
 export default function AdminOrdersRoute() {
-  return <OrdersPage />;
+  return <OrdersSplitView />;
 }

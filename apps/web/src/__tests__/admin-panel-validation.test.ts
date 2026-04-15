@@ -35,7 +35,8 @@ describe('Admin Panel - File Structure', () => {
     const hooks = [
       'hooks/useAdminAuth.ts',
       'hooks/useAdminProducts.ts',
-      'hooks/useAdminOrders.ts',
+      'hooks/useOrdersList.ts',
+      'hooks/useOrderDetail.ts',
       'hooks/useAdminShipping.ts',
       'hooks/useAdminDashboard.ts',
     ];
@@ -54,11 +55,12 @@ describe('Admin Panel - File Structure', () => {
       'components/Products/ProductsPage.tsx',
       'components/Products/ProductTable.tsx',
       'components/Products/ProductForm.tsx',
-      'components/Orders/OrdersPage.tsx',
-      'components/Orders/OrderTable.tsx',
-      'components/Orders/OrderFilters.tsx',
-      'components/Fulfillment/ShippingUpdateModal.tsx',
-      'components/Fulfillment/ShippingForm.tsx',
+      'components/Orders/OrdersSplitView.tsx',
+      'components/Orders/OrdersListPanel.tsx',
+      'components/Orders/OrderListItem.tsx',
+      'components/Orders/OrdersSearchBar.tsx',
+      'components/Orders/OrderDetailPanel.tsx',
+      'components/Orders/ShippingUpdateForm.tsx',
     ];
     
     components.forEach(component => {
