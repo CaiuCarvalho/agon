@@ -137,7 +137,8 @@ export async function POST(request: NextRequest) {
     // 4. Fetch order items for Mercado Pago preference
     const itemsTimestamp = new Date().toISOString();
     console.log(`[${itemsTimestamp}] [CHECKOUT] Step 6: Fetching order items...`);
-    const { data: orderItems, error: itemsError } = await supabase
+    const adminClient = createAdminClient();
+    const { data: orderItems, error: itemsError } = await adminClient
       .from('order_items')
       .select('product_name, quantity, product_price')
       .eq('order_id', orderResult.order_id);
