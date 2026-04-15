@@ -10,7 +10,14 @@
 
 import { MercadoPagoConfig, Preference, Payment } from 'mercadopago';
 import crypto from 'crypto';
+import { z } from 'zod';
 import type { PreferenceRequest, PreferenceResponse, MercadoPagoPayment } from '../types';
+
+const preferenceItemSchema = z.object({
+  productName: z.string().min(1),
+  quantity: z.number().int().positive(),
+  productPrice: z.number().positive(),
+});
 
 // Initialize SDK (singleton)
 let mercadoPagoClient: MercadoPagoConfig | null = null;
@@ -228,18 +235,27 @@ export const mercadoPagoService = {
     }
   ): PreferenceRequest {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
-    
+
     if (!appUrl) {
       throw new Error('NEXT_PUBLIC_APP_URL is not configured');
     }
-    
+
+    // Validate items before building the request
+    const validatedItems = items.map((item, i) => {
+      const result = preferenceItemSchema.safeParse(item);
+      if (!result.success) {
+        throw new Error(`Item inválido na posição ${i}: ${result.error.message}`);
+      }
+      return result.data;
+    });
+
     // Parse phone: (XX) XXXXX-XXXX -> area_code: XX, number: XXXXXXXXX
     const phoneMatch = shippingInfo.shippingPhone.match(/\((\d{2})\) (\d{4,5})-(\d{4})/);
     const areaCode = phoneMatch?.[1] || '';
     const phoneNumber = phoneMatch ? `${phoneMatch[2]}${phoneMatch[3]}` : '';
     
     return {
-      items: items.map((item, index) => ({
+      items: validatedItems.map((item, index) => ({
         id: `item-${index + 1}`,
         title: item.productName,
         quantity: item.quantity,

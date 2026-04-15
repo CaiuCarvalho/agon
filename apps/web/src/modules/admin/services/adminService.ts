@@ -2,9 +2,12 @@
 // Provides admin validation middleware and authentication utilities
 
 import { NextRequest } from 'next/server';
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/server';
 import type { AdminUser, ApiError } from '../types';
 import { isAdminRole } from '@/lib/auth/roles';
+
+const adminEmailSchema = z.string().email();
 
 /**
  * Validates if the current user is an admin with proper permissions
@@ -78,7 +81,8 @@ export async function validateAdmin(req: NextRequest): Promise<AdminUser | ApiEr
     process.env.ADMIN_EMAIL_BACKUP,
   ].filter(Boolean);
   
-  if (!whitelist.includes(user.email)) {
+  const emailValidation = adminEmailSchema.safeParse(user.email);
+  if (!emailValidation.success || !whitelist.includes(emailValidation.data)) {
     console.log('[SECURITY] Email not in whitelist:', {
       timestamp: new Date().toISOString(),
       user_email: user.email,
@@ -91,7 +95,6 @@ export async function validateAdmin(req: NextRequest): Promise<AdminUser | ApiEr
       message: 'Access denied',
     };
   }
-  
   // All checks passed - return admin user
   return {
     id: user.id,

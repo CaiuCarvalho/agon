@@ -1,8 +1,11 @@
 // Order service - handles order creation and retrieval
 // Pure service - no UI logic
 
+import { z } from 'zod';
 import { createClient } from '@/lib/supabase/client';
 import { ShippingFormValues, PaymentMethod } from '../contracts';
+
+const orderIdSchema = z.string().uuid();
 
 // Database row types (snake_case from Postgres)
 export interface OrderRow {
@@ -158,8 +161,11 @@ export async function createOrder(request: CreateOrderRequest): Promise<CreateOr
  * RLS policies ensure users can only access their own orders
  */
 export async function getOrderById(orderId: string): Promise<OrderWithItems | null> {
+  const idValidation = orderIdSchema.safeParse(orderId);
+  if (!idValidation.success) return null;
+
   const supabase = createClient();
-  
+
   // Fetch order
   const { data: orderData, error: orderError } = await supabase
     .from('orders')
