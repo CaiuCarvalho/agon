@@ -99,6 +99,62 @@ Copy `.env.example` to `.env.local` to get started.
 - **Resend** — transactional email (referenced in env schema; confirm active usage before removing)
 - **Google Tag Manager** — GTM snippet hardcoded in `apps/web/src/app/layout.tsx` (ID: `GTM-MCVPTPL3`); analytics.ts and GoogleAnalytics component were removed — tracking now goes through GTM only
 
+## Production Infrastructure (VPS)
+
+### Server
+- **Host:** `187.127.13.56` — `srv1554002`
+- **OS user:** `root`
+- **Node:** v20.20.2 / npm 10.8.2
+- **Disk:** 96G total, ~8G used
+
+### App location
+- **Repo:** `/var/www/agon/app/` (git clone of this repo)
+- **Web working dir:** `/var/www/agon/app/apps/web/` (PM2 cwd)
+- **`.env.local`:** `/var/www/agon/app/apps/web/.env.local`
+- **Stray file to remove:** `/var/www/agon/package-lock.json` (not part of repo)
+
+### Process manager
+- PM2, process name `agon-web`, id `0`, fork mode
+- Next.js listens on **port 30000**
+- Start/reload: `pm2 reload agon-web --update-env`
+- Startup persisted via `pm2 save`
+
+### Nginx
+- Config: `/var/www/agon/app/nginx.conf` (also at `/etc/nginx/sites-enabled/`)
+- HTTP → HTTPS redirect on port 80
+- Reverse proxy `443 → localhost:30000`
+- SSL via Let's Encrypt (`/etc/letsencrypt/live/agonimports.com/`)
+- Static assets cached 60 min (`/_next/static`)
+
+### CI/CD (GitHub Actions)
+- **CI** (`.github/workflows/ci.yml`): typecheck + tests on push/PR to `main`
+- **Deploy** (`.github/workflows/deploy.yml`): on push to `main` — builds `.env.local` from GitHub secrets, SCPs to VPS, SSHs to run `deploy.sh`, health checks `HEALTHCHECK_URL`
+- **deploy.sh**: `git fetch + reset --hard`, `npm ci`, `npm run build`, `pm2 reload`
+
+### GitHub Actions Secrets required
+All must be set at `github.com/CaiuCarvalho/agon/settings/secrets/actions`:
+```
+NEXT_PUBLIC_SUPABASE_URL
+NEXT_PUBLIC_SUPABASE_ANON_KEY
+SUPABASE_SERVICE_ROLE_KEY
+MERCADOPAGO_ACCESS_TOKEN
+MERCADOPAGO_WEBHOOK_SECRET
+RESEND_API_KEY
+NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+CLOUDINARY_API_KEY
+CLOUDINARY_API_SECRET
+NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET
+VPS_HOST          # 187.127.13.56
+VPS_USER          # root
+VPS_PORT          # SSH port
+VPS_SSH_KEY       # private key of ~/.ssh/github_actions on VPS
+HEALTHCHECK_URL   # https://agonimports.com/api/health
+```
+> `NEXT_PUBLIC_APP_URL` is hardcoded as `https://agonimports.com` in the workflow (not a secret).
+
+### Deploy workflow caveat
+The deploy workflow **overwrites** `.env.local` on every run from GitHub secrets. Any variable not in secrets will be wiped. Keep all required env vars as secrets — do not rely on manual edits to `.env.local` on the VPS persisting across deploys.
+
 ## Monorepo Notes
 
 Turborepo caches `.next/` build outputs. `turbo.json` defines task dependencies (`build` depends on `^build`). Dev tasks have `cache: false`. TypeScript uses a shared base config at `tsconfig.base.json`; each workspace extends it.
