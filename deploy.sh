@@ -13,7 +13,7 @@ echo "Instalando dependencias..."
 npm ci
 
 echo "Limpando cache de build..."
-rm -rf .turbo apps/web/.next
+rm -rf .turbo apps/web/.next node_modules/.cache/turbo
 
 echo "Buildando projeto..."
 npm run build
