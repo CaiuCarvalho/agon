@@ -24,15 +24,15 @@ import { describe, it, expect, beforeAll, afterEach } from 'vitest';
 import { createClient } from '@supabase/supabase-js';
 import * as fc from 'fast-check';
 
-describe('Preservation Property Tests: Core Flow Stabilization', () => {
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const hasSupabaseEnv = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
+
+describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Core Flow Stabilization', () => {
   let supabase: ReturnType<typeof createClient>;
   let testUserId: string | null = null;
 
   beforeAll(async () => {
-    // Read env variables
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    
     // Test user credentials
     const TEST_USER_EMAIL = 'test@example.com';
     const TEST_USER_PASSWORD = 'TestPassword123!';
