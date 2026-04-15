@@ -25,7 +25,11 @@ jobs:
         run: npm ci
 
       - name: Type check
+        working-directory: apps/web
         run: npx tsc --noEmit
+
+      - name: Audit (SDD)
+        run: npm run audit
 
       - name: Run tests
         working-directory: apps/web

@@ -91,6 +91,23 @@ Copy `.env.example` to `.env.local` to get started.
 - Mercado Pago SDK calls: 25s (Next.js default is 60s, leaving headroom)
 - React Query: 10s via `meta.timeout`
 
+## Spec-Driven Development (SDD)
+
+Todo trabalho não-trivial (feature nova, bugfix complexo, refatoração) segue este fluxo usando as skills do Claude Code:
+
+1. **`superpowers:brainstorming`** — entender requisitos, propor abordagens, aprovar design
+2. **`superpowers:writing-plans`** — plano de implementação passo a passo
+3. **`superpowers:subagent-driven-development`** ou **`superpowers:executing-plans`** — execução com checkpoints de revisão
+4. **`superpowers:test-driven-development`** — testes antes da implementação
+5. **`superpowers:verification-before-completion`** — verificar antes de declarar pronto
+
+### Regras de qualidade (verificadas pelo audit no CI)
+
+- Todo módulo em `apps/web/src/modules/` precisa de `contracts.ts` com `z.object` (Zod)
+- Services em `services/` precisam usar `.parse()` ou `.safeParse()` para dados externos
+- Secrets hardcoded bloqueiam o CI imediatamente (CRITICAL)
+- Anti-patterns `any` são informativos — evitar em código novo, não bloqueiam CI
+
 ## Key Integrations
 
 - **Supabase** — auth, database (PostgreSQL + RLS), realtime subscriptions
@@ -127,7 +144,7 @@ Copy `.env.example` to `.env.local` to get started.
 - Static assets cached 60 min (`/_next/static`)
 
 ### CI/CD (GitHub Actions)
-- **CI** (`.github/workflows/ci.yml`): typecheck + tests on push/PR to `main`
+- **CI** (`.github/workflows/ci.yml`): typecheck + audit SDD + tests on push/PR to `main`
 - **Deploy** (`.github/workflows/deploy.yml`): on push to `main` — builds `.env.local` from GitHub secrets, SCPs to VPS, SSHs to run `deploy.sh`, health checks `HEALTHCHECK_URL`
 - **deploy.sh**: `git fetch + reset --hard`, `npm ci`, `npm run build`, `pm2 reload`
 

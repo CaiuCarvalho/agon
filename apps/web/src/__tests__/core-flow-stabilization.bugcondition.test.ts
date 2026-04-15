@@ -32,15 +32,15 @@ import * as fc from 'fast-check';
 import * as fs from 'fs';
 import * as path from 'path';
 
-describe('Bug Condition Exploration: Core Flow Stabilization', () => {
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
+const hasSupabaseEnv = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
+
+describe.skipIf(!hasSupabaseEnv)('Bug Condition Exploration: Core Flow Stabilization', () => {
   let supabase: ReturnType<typeof createClient>;
   let testUserId: string | null = null;
 
   beforeAll(async () => {
-    // Read env variables (loaded by setup.ts)
-    const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
-    const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
-    
     // Test user credentials (must exist in database)
     const TEST_USER_EMAIL = 'test@example.com';
     const TEST_USER_PASSWORD = 'TestPassword123!';
