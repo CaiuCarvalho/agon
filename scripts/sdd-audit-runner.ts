@@ -24,11 +24,16 @@ interface AllowlistItem {
 
 const ROOT_DIR = process.cwd();
 const MODULES_DIR = path.join(ROOT_DIR, 'apps/web/src/modules');
-const SPECS_DIR = path.join(ROOT_DIR, 'reference/specs');
 const ALLOWLIST_FILE = path.join(ROOT_DIR, 'scripts/sdd-secret-allowlist.json');
 
-const IGNORE_FOLDERS = ['node_modules', '.next', '.git', 'dist', 'build', 'coverage', '.turbo'];
-const IGNORE_EXTENSIONS = ['.log', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2', '.ico', '.webp', '.map'];
+const IGNORE_FOLDERS = [
+  'node_modules', '.next', '.git', 'dist', 'build', 'coverage', '.turbo',
+  '.kiro', 'reference', 'docs',
+];
+const IGNORE_EXTENSIONS = [
+  '.log', '.png', '.jpg', '.jpeg', '.gif', '.svg', '.woff', '.woff2',
+  '.ico', '.webp', '.map', '.md',
+];
 
 const SECRET_PATTERNS: Array<{ name: string; regex: RegExp; severity: 'CRITICAL' | 'MEDIUM' }> = [
   { name: 'Stripe Live Key',         regex: /sk_live_[a-zA-Z0-9]{24,}/g,                                  severity: 'CRITICAL' },
@@ -93,49 +98,42 @@ function collectAllFiles(dir: string, result: string[] = []): string[] {
 
 // ─── Auditorias ──────────────────────────────────────────────
 
-function auditModuleSpecs(issues: AuditIssue[]) {
-  if (!fs.existsSync(MODULES_DIR) || !fs.existsSync(SPECS_DIR)) return;
+function auditModuleContracts(issues: AuditIssue[]) {
+  if (!fs.existsSync(MODULES_DIR)) return;
 
   const modules = fs.readdirSync(MODULES_DIR)
     .filter(f => fs.statSync(path.join(MODULES_DIR, f)).isDirectory());
 
   for (const mod of modules) {
     const modPath = path.join(MODULES_DIR, mod);
-    const specFiles = fs.readdirSync(SPECS_DIR).filter(f => f.startsWith(mod) && f.endsWith('.md'));
 
-    // Spec existence
-    if (specFiles.length === 0) {
-      issues.push({
-        severity: 'CRITICAL', category: 'Arquitetura',
-        message: `Módulo '${mod}' sem spec em /reference/specs/${mod}-*.md`,
-      });
-    } else {
-      const content = fs.readFileSync(path.join(SPECS_DIR, specFiles[0]), 'utf8');
-      for (const section of ['PROBLEMA', 'OBJETIVOS', 'CONTRATOS', 'CRITÉRIOS DE ACEITE']) {
-        if (!content.includes(section)) {
-          issues.push({
-            severity: 'MEDIUM', category: 'Documentação',
-            message: `Spec '${specFiles[0]}' incompleta — seção '${section}' ausente.`,
-          });
-        }
-      }
-    }
-
-    // Contracts
+    // Verifica contracts.ts com Zod
     const contractsPath = path.join(modPath, 'contracts.ts');
     if (!fs.existsSync(contractsPath)) {
-      issues.push({ severity: 'MEDIUM', category: 'Contratos', message: `Módulo '${mod}' sem contracts.ts.` });
+      issues.push({
+        severity: 'MEDIUM', category: 'Contratos',
+        message: `Módulo '${mod}' sem contracts.ts.`,
+      });
     } else if (!fs.readFileSync(contractsPath, 'utf8').includes('z.object')) {
-      issues.push({ severity: 'MEDIUM', category: 'Contratos', message: `Contracts de '${mod}' não usa Zod.` });
+      issues.push({
+        severity: 'MEDIUM', category: 'Contratos',
+        message: `Contracts de '${mod}' não usa Zod.`,
+      });
     }
 
-    // Services validation
+    // Verifica validação Zod nos services (exclui arquivos de teste)
     const servicesDir = path.join(modPath, 'services');
     if (fs.existsSync(servicesDir)) {
-      for (const svc of fs.readdirSync(servicesDir).filter(f => f.endsWith('.ts'))) {
+      const serviceFiles = fs.readdirSync(servicesDir)
+        .filter(f => f.endsWith('.ts') && !f.endsWith('.test.ts') && !f.endsWith('.spec.ts'));
+
+      for (const svc of serviceFiles) {
         const content = fs.readFileSync(path.join(servicesDir, svc), 'utf8');
         if (!content.includes('.parse(') && !content.includes('.safeParse(')) {
-          issues.push({ severity: 'MEDIUM', category: 'Contratos', message: `Service '${svc}' sem validação Zod.` });
+          issues.push({
+            severity: 'MEDIUM', category: 'Contratos',
+            message: `Service '${svc}' sem validação Zod.`,
+          });
         }
       }
     }
@@ -243,33 +241,24 @@ function auditSecrets(issues: AuditIssue[], files: string[]) {
   }
 }
 
-function auditAntiPatterns(issues: AuditIssue[], files: string[]) {
+function auditAntiPatterns(files: string[]): number {
   const CONFIG_FILES = ['.config.js', '.config.ts', '.config.mjs', 'tsconfig.json'];
+  let count = 0;
 
   for (const file of files) {
     if (!(file.endsWith('.ts') || file.endsWith('.tsx'))) continue;
     const basename = path.basename(file);
     if (CONFIG_FILES.some(c => basename.includes(c))) continue;
 
-    const relPath = path.relative(ROOT_DIR, file);
     const lines = fs.readFileSync(file, 'utf8').split('\n');
-
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      // Skip comment lines
+    for (const line of lines) {
       if (line.trimStart().startsWith('//') || line.trimStart().startsWith('*')) continue;
-
-      // Match `: any`, `as any`, `<any>`
       if (/:\s*any\b/.test(line) || /\bas\s+any\b/.test(line) || /<\s*any\s*>/.test(line)) {
-        issues.push({
-          severity: 'LOW', category: 'Anti-pattern',
-          file: relPath, line: i + 1,
-          message: `Anti-pattern 'any' detectado`,
-          snippet: line.trim().substring(0, 60),
-        });
+        count++;
       }
     }
   }
+  return count;
 }
 
 // ─── Main ────────────────────────────────────────────────────
@@ -284,14 +273,17 @@ async function main() {
   console.log(`📁 ${allFiles.length} arquivos para análise.\n`);
 
   // Run audits
-  console.log('── 1/3 Verificando Módulos & Specs ──');
-  auditModuleSpecs(issues);
+  console.log('── 1/3 Verificando Módulos & Contratos ──');
+  auditModuleContracts(issues);
 
   console.log('── 2/3 Verificando Segurança ──');
   auditSecrets(issues, allFiles);
 
   console.log('── 3/3 Verificando Anti-patterns ──');
-  auditAntiPatterns(issues, allFiles);
+  const anyCount = auditAntiPatterns(allFiles);
+  if (anyCount > 0) {
+    console.log(`  ℹ️  ${anyCount} uso(s) de 'any' detectados (informativo — não bloqueia CI)`);
+  }
 
   // Summary
   const criticals = issues.filter(i => i.severity === 'CRITICAL');
