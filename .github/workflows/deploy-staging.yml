@@ -1,12 +1,12 @@
-name: Deploy to VPS
+name: Deploy to Staging
 
 on:
   push:
-    branches: [main]
+    branches: [staging]
   workflow_dispatch:
 
 concurrency:
-  group: deploy-production
+  group: deploy-staging
   cancel-in-progress: false
 
 jobs:
@@ -20,20 +20,20 @@ jobs:
         with:
           version: latest
 
-      - name: Run database migrations
-        run: supabase db push --project-ref ${{ secrets.SUPABASE_PROJECT_ID }}
+      - name: Run database migrations (staging)
+        run: supabase db push --project-ref ${{ secrets.STAGING_SUPABASE_PROJECT_ID }}
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
 
-      - name: Build .env.local
+      - name: Build .env.local (staging)
         run: |
-          cat > env.prod <<'EOF'
-          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
-          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-          MERCADOPAGO_ACCESS_TOKEN=${{ secrets.MERCADOPAGO_ACCESS_TOKEN }}
-          MERCADOPAGO_WEBHOOK_SECRET=${{ secrets.MERCADOPAGO_WEBHOOK_SECRET }}
-          NEXT_PUBLIC_APP_URL=https://agonimports.com
+          cat > env.staging <<'EOF'
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          MERCADOPAGO_ACCESS_TOKEN=${{ secrets.STAGING_MERCADOPAGO_ACCESS_TOKEN }}
+          MERCADOPAGO_WEBHOOK_SECRET=${{ secrets.STAGING_MERCADOPAGO_WEBHOOK_SECRET }}
+          NEXT_PUBLIC_APP_URL=https://staging.agonimports.com
           NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
           CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
           CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
@@ -41,17 +41,17 @@ jobs:
           RESEND_API_KEY=${{ secrets.RESEND_API_KEY }}
           EOF
 
-      - name: Copy .env to VPS
+      - name: Copy .env to VPS (staging)
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          source: env.prod
-          target: /var/www/agon/app/apps/web/
+          source: env.staging
+          target: /var/www/agon/staging/apps/web/
 
-      - name: Run deploy on VPS
+      - name: Run deploy on VPS (staging)
         uses: appleboy/ssh-action@v1.2.0
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -60,21 +60,21 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             set -e
-            git config --global --add safe.directory /var/www/agon/app
-            cd /var/www/agon/app/apps/web
-            mv env.prod .env.local
+            git config --global --add safe.directory /var/www/agon/staging
+            cd /var/www/agon/staging/apps/web
+            mv env.staging .env.local
             chmod 600 .env.local
-            cd /var/www/agon/app
-            bash deploy.sh
+            cd /var/www/agon/staging
+            bash deploy-staging.sh
 
-      - name: Health check
+      - name: Health check (staging)
         run: |
           for i in $(seq 1 10); do
-            if curl -fsS "${{ secrets.HEALTHCHECK_URL }}" > /dev/null; then
-              echo "Site no ar"
+            if curl -fsS "https://staging.agonimports.com/api/health" > /dev/null; then
+              echo "Staging no ar"
               exit 0
             fi
-            echo "Aguardando app subir... ($i/10)"
+            echo "Aguardando staging subir... ($i/10)"
             sleep 6
           done
           echo "Health check falhou"
