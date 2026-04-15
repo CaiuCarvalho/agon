@@ -52,11 +52,6 @@ CREATE TRIGGER update_payments_updated_at
 -- 4. Add comments
 -- ============================================
 
-COMMENT ON TABLE payments IS 'Stores Mercado Pago payment transactions linked to orders';
-COMMENT ON COLUMN payments.mercadopago_payment_id IS 'Mercado Pago payment ID, set when webhook is received';
-COMMENT ON COLUMN payments.mercadopago_preference_id IS 'Mercado Pago preference ID, set when preference is created';
-COMMENT ON COLUMN payments.status IS 'Payment status from Mercado Pago: pending, approved, rejected, cancelled, refunded, in_process';
-COMMENT ON COLUMN payments.payment_method IS 'Payment method used: credit_card, debit_card, pix, boleto, account_money';
 
 -- ============================================
 -- 5. Enable RLS
@@ -294,20 +289,15 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-COMMENT ON FUNCTION create_order_with_payment_atomic IS 'Atomically creates order with items and initial payment record';
 
 -- ============================================
 -- 9. Create RPC function: update_payment_from_webhook
 -- ============================================
 
 CREATE OR REPLACE FUNCTION update_payment_from_webhook(
-  p_mercadopago_payment_id TEXT,
-  p_status TEXT,
-  p_payment_method TEXT
 )
 RETURNS JSONB AS $$
 DECLARE
-  v_payment RECORD;
   v_order_id UUID;
   v_new_order_status TEXT;
   v_user_id UUID;
@@ -386,4 +376,3 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-COMMENT ON FUNCTION update_payment_from_webhook IS 'Updates payment and order status from Mercado Pago webhook (idempotent)';

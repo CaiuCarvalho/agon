@@ -282,8 +282,4 @@ EXCEPTION
 END;
 $$;
 
-COMMENT ON FUNCTION public.create_order_with_payment_atomic IS
-  'Atomically creates an order with items, clears the cart, and creates a pending payment record. Uses price_snapshot/product_name_snapshot from cart_items; only queries products table for stock validation.';
 
-COMMENT ON FUNCTION public.create_order_atomic IS
-  'Fallback: atomically creates an order with items and clears the cart (payment record created separately). Uses price_snapshot/product_name_snapshot from cart_items; only queries products table for stock validation.';

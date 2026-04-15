@@ -79,4 +79,3 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Add comment for documentation
-COMMENT ON FUNCTION add_to_cart_atomic(UUID, UUID, INTEGER, TEXT) IS 'Atomically adds item to cart with price snapshot, preventing race conditions';

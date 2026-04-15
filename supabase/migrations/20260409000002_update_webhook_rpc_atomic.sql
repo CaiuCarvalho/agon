@@ -97,4 +97,3 @@ EXCEPTION
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-COMMENT ON FUNCTION update_payment_from_webhook IS 'Updates payment and order status from Mercado Pago webhook (idempotent, atomic). Calls assert_single_payment_per_order for defensive check and derive_order_status for consistent status derivation.';

@@ -135,4 +135,3 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Add comment for documentation
-COMMENT ON FUNCTION create_order_atomic IS 'Atomically creates an order with items and clears the cart. All operations succeed or all fail (no partial state).';
