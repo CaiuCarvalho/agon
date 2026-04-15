@@ -1,4 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { shippingFormSchema } from '../contracts';
 
 type ShippingInput = {
   shippingName: string;
@@ -51,6 +52,15 @@ export async function createOrderFromCart(params: {
   shipping: ShippingInput;
 }): Promise<CreateOrderResult> {
   const { supabase, userId, shipping } = params;
+
+  const shippingValidation = shippingFormSchema.safeParse(shipping);
+  if (!shippingValidation.success) {
+    return {
+      success: false,
+      error: 'Dados de entrega inválidos',
+      details: shippingValidation.error.flatten().fieldErrors,
+    };
+  }
 
   const withPaymentArgs = {
     p_user_id: userId,

@@ -1,9 +1,12 @@
 // Dashboard Service
 // Provides dashboard metrics calculation and data fetching
 
+import { z } from 'zod';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { isConfigurationError } from '@/lib/env';
 import type { DashboardMetrics, OrderSummary, ServiceResult } from '../types';
+
+const paymentRowSchema = z.object({ amount: z.coerce.number() });
 
 /**
  * Fetches dashboard metrics including revenue, order counts, and recent orders
@@ -39,7 +42,10 @@ export async function getDashboardMetrics(): Promise<ServiceResult<DashboardMetr
       };
     }
     
-    const totalRevenue = revenueData.reduce((sum, payment) => sum + payment.amount, 0);
+    const totalRevenue = revenueData.reduce((sum, payment) => {
+      const validated = paymentRowSchema.safeParse(payment);
+      return sum + (validated.success ? validated.data.amount : 0);
+    }, 0);
     const approvedOrdersCount = revenueData.length;
     
     // Calculate order counts by status

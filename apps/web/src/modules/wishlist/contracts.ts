@@ -1,9 +1,11 @@
 /**
  * Wishlist Module Contracts
- * 
- * Re-exports wishlist-related schemas from the cart module
- * for better organization and discoverability.
+ *
+ * Defines wishlist-specific validation schemas and re-exports
+ * shared schemas from the cart module.
  */
+
+import { z } from 'zod';
 
 export {
   wishlistItemSchema,
@@ -11,3 +13,11 @@ export {
   type WishlistItemInput,
   type LocalStorageWishlistData,
 } from '../cart/contracts';
+
+/** Pagination/filter params for wishlist API queries */
+export const wishlistQuerySchema = z.object({
+  page: z.number().int().positive().default(1),
+  limit: z.number().int().positive().max(50).default(20),
+});
+
+export type WishlistQueryParams = z.infer<typeof wishlistQuerySchema>;

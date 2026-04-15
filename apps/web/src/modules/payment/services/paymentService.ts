@@ -10,6 +10,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import type { Payment, UpdatePaymentStatusResponse } from '../types';
+import { paymentStatusSchema } from '../contracts';
 
 /**
  * Transform database row (snake_case) to Payment (camelCase)
@@ -114,8 +115,13 @@ export const paymentService = {
     status: Payment['status'],
     paymentMethod: string
   ): Promise<UpdatePaymentStatusResponse> {
+    const statusValidation = paymentStatusSchema.safeParse(status);
+    if (!statusValidation.success) {
+      throw new Error(`Invalid payment status: ${status}`);
+    }
+
     const supabase = createClient();
-    
+
     const { data, error } = await supabase.rpc('update_payment_from_webhook', {
       p_mercadopago_payment_id: mercadopagoPaymentId,
       p_status: status,

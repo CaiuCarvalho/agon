@@ -17,6 +17,7 @@
 
 import { createClient } from '@/lib/supabase/client';
 import { localStorageService } from './localStorageService';
+import { localStorageCartSchema, localStorageWishlistSchema } from '../contracts';
 import type { MigrationResult } from '../types';
 
 export const migrationService = {
@@ -73,14 +74,16 @@ export const migrationService = {
    */
   async migrateCart(userId: string): Promise<{ itemsMigrated: number; errors: string[] }> {
     const supabase = createClient();
-    const localCart = localStorageService.getCart();
+    const rawCart = localStorageService.getCart();
+    const cartValidation = localStorageCartSchema.safeParse(rawCart);
+    const localCart = cartValidation.success ? cartValidation.data : rawCart;
     const errors: string[] = [];
-    
+
     // Skip if no items to migrate
     if (localCart.items.length === 0) {
       return { itemsMigrated: 0, errors: [] };
     }
-    
+
     try {
       // Use transactional RPC function for atomic migration
       const { data, error } = await supabase.rpc('migrate_cart_items', {
@@ -132,14 +135,16 @@ export const migrationService = {
    */
   async migrateWishlist(userId: string): Promise<{ itemsMigrated: number; errors: string[] }> {
     const supabase = createClient();
-    const localWishlist = localStorageService.getWishlist();
+    const rawWishlist = localStorageService.getWishlist();
+    const wishlistValidation = localStorageWishlistSchema.safeParse(rawWishlist);
+    const localWishlist = wishlistValidation.success ? wishlistValidation.data : rawWishlist;
     const errors: string[] = [];
-    
+
     // Skip if no items to migrate
     if (localWishlist.items.length === 0) {
       return { itemsMigrated: 0, errors: [] };
     }
-    
+
     try {
       // Use transactional RPC function for atomic migration
       const { data, error } = await supabase.rpc('migrate_wishlist_items', {
