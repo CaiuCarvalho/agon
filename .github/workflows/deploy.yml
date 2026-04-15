@@ -50,6 +50,7 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           script: |
             set -e
+            git config --global --add safe.directory /var/www/agon/app
             cd /var/www/agon/app/apps/web
             mv env.prod .env.local
             chmod 600 .env.local
