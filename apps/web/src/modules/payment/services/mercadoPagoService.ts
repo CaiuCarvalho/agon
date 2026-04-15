@@ -264,8 +264,7 @@ export const mercadoPagoService = {
       notification_url: `${appUrl}/api/webhooks/mercadopago`,
       statement_descriptor: 'AGON MVP',
       payment_methods: {
-        // Not passing excluded_payment_types so all methods are available:
-        // credit card, debit card, PIX, and boleto
+        excluded_payment_types: [{ id: 'ticket' }], // Desabilita boleto bancário
         installments: 12, // Max installments for credit card
       },
     };
