@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { Order } from '@/modules/admin/types';
+import { formatBRL } from '@/lib/format';
 
 /**
  * Hook for displaying order notifications using Sonner toast
@@ -23,16 +24,6 @@ import type { Order } from '@/modules/admin/types';
  */
 export function useOrderNotifications() {
   const router = useRouter();
-  
-  /**
-   * Format currency in Brazilian Real
-   */
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(amount);
-  };
   
   /**
    * Get payment method label in Portuguese
@@ -60,7 +51,7 @@ export function useOrderNotifications() {
    * Display notification for new order
    */
   const notifyNewOrder = (order: Order) => {
-    const amount = formatCurrency(order.totalAmount);
+    const amount = formatBRL(order.totalAmount);
     const paymentMethod = getPaymentMethodLabel(order.paymentMethod);
     
     toast.success('Novo Pedido Criado!', {
@@ -77,7 +68,7 @@ export function useOrderNotifications() {
    * Display notification for order status update
    */
   const notifyOrderUpdate = (order: Order, oldStatus?: string) => {
-    const amount = formatCurrency(order.totalAmount);
+    const amount = formatBRL(order.totalAmount);
     
     // Only notify when status changes to processing (payment approved)
     if (order.status === 'processing') {

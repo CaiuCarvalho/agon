@@ -169,33 +169,26 @@ describe('Preservation: Existing Checkout Functionality', () => {
     
     // Test Case 2: Invalid phone format
     console.log('\nTest Case 2: Invalid phone format');
-    const requestWithInvalidPhone = mercadoPagoService.buildPreferenceRequest(
-      'order-123',
-      [{ productName: 'Product', quantity: 1, productPrice: 100 }],
-      {
-        shippingName: 'Test User',
-        shippingEmail: 'test@example.com',
-        shippingPhone: 'invalid-phone', // Invalid format
-      }
-    );
-    
-    console.log('✓ Request built with invalid phone');
-    console.log('Phone parsed as:', {
-      area_code: requestWithInvalidPhone.payer.phone.area_code,
-      number: requestWithInvalidPhone.payer.phone.number,
-    });
-    
-    // BASELINE BEHAVIOR (must be preserved):
-    // - Invalid phone format results in empty area_code and number
-    // - This is caught by Mercado Pago API validation
-    expect(requestWithInvalidPhone.payer.phone.area_code).toBe('');
-    expect(requestWithInvalidPhone.payer.phone.number).toBe('');
-    
+    // Defense-in-depth: buildPreferenceRequest now throws on invalid phone format.
+    // The API route's Zod validation catches this BEFORE the service is called in
+    // production, so a throw here signals a broken upstream contract (fail fast).
+    expect(() =>
+      mercadoPagoService.buildPreferenceRequest(
+        'order-123',
+        [{ productName: 'Product', quantity: 1, productPrice: 100 }],
+        {
+          shippingName: 'Test User',
+          shippingEmail: 'test@example.com',
+          shippingPhone: 'invalid-phone',
+        }
+      )
+    ).toThrow(/Invalid phone format/);
+
     console.log('\n--- Baseline Behavior (MUST BE PRESERVED) ---');
     console.log('Validation errors:');
     console.log('- Empty cart is validated by API route (returns 400)');
-    console.log('- Invalid phone format results in empty area_code/number');
-    console.log('- Mercado Pago API validates and returns error');
+    console.log('- Invalid phone format throws at service layer (defense-in-depth)');
+    console.log('- API route Zod catches invalid phone before service is called');
     console.log('- API route catches and returns 400 to client');
   });
 

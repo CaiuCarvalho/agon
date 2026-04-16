@@ -1,7 +1,7 @@
 "use client";
 
 import { CreditCard, QrCode, ShieldCheck, Loader2 } from "lucide-react";
-import { formatCurrency } from "@/lib/utils";
+import { formatBRL } from "@/lib/format";
 import { CartItem } from "@/types/cart";
 
 interface OrderSummaryProps {
@@ -44,10 +44,10 @@ export function OrderSummary({
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-widest">Qtd: {item.quantity}</span>
                   <span className="w-1 h-1 rounded-full bg-muted-foreground/30" />
-                  <span className="text-[10px] text-primary uppercase font-black italic tracking-widest">{formatCurrency(item.price)} un.</span>
+                  <span className="text-[10px] text-primary uppercase font-black italic tracking-widest">{formatBRL(item.price)} un.</span>
                 </div>
               </div>
-              <p className="text-sm font-black italic text-foreground">{formatCurrency(item.price * item.quantity)}</p>
+              <p className="text-sm font-black italic text-foreground">{formatBRL(item.price * item.quantity)}</p>
             </div>
           ))}
         </div>
@@ -55,28 +55,28 @@ export function OrderSummary({
         <div className="space-y-5 mb-10">
           <div className="flex justify-between text-[10px] uppercase font-black text-muted-foreground tracking-[0.3em]">
             <span>Subtotal</span>
-            <span className="text-foreground">{formatCurrency(subtotal)}</span>
+            <span className="text-foreground">{formatBRL(subtotal)}</span>
           </div>
           <div className="flex justify-between text-[10px] uppercase font-black text-muted-foreground tracking-[0.3em]">
             <span>Frete Agon Elite</span>
             {shippingCost === 0 ? (
               <span className="text-secondary font-black animate-pulse">GRÁTIS 🔥</span>
             ) : (
-              <span className="text-foreground">{formatCurrency(shippingCost)}</span>
+              <span className="text-foreground">{formatBRL(shippingCost)}</span>
             )}
           </div>
           
           {subtotal < freeShippingThreshold && (
              <div className="bg-primary/5 p-4 rounded-2xl border border-primary/20 transition-all">
               <p className="text-[9px] text-center text-primary font-black uppercase tracking-widest">
-                Faltam <span className="underline">{formatCurrency(freeShippingThreshold - subtotal)}</span> para o <span className="italic">Frete Grátis acima de R$ 200</span>!
+                Faltam <span className="underline">{formatBRL(freeShippingThreshold - subtotal)}</span> para o <span className="italic">Frete Grátis acima de R$ 200</span>!
               </p>
             </div>
           )}
           
           <div className="flex justify-between items-end pt-6 border-t border-border/20">
             <span className="text-[10px] uppercase font-black text-muted-foreground tracking-[0.4em] mb-1">Total Final</span>
-            <span className="text-4xl font-display uppercase italic font-black text-primary tracking-tighter leading-none">{formatCurrency(total)}</span>
+            <span className="text-4xl font-display uppercase italic font-black text-primary tracking-tighter leading-none">{formatBRL(total)}</span>
           </div>
         </div>
 

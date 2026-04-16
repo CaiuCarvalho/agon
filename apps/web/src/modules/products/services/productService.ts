@@ -182,12 +182,6 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
     data = result.data;
     error = result.error;
     count = result.count;
-    
-    const queryTime = Date.now() - startTime;
-    console.log(`[getProducts] Query completed in ${queryTime}ms`, {
-      filters: { ...filters, limit: effectiveLimit },
-      isColdStart: queryTime > 5000,
-    });
   } catch (timeoutError: any) {
     const queryTime = Date.now() - startTime;
     
@@ -203,17 +197,12 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
     // Retry once on timeout (cold start mitigation)
     if (!retryAttempted) {
       retryAttempted = true;
-      console.log('[getProducts] Retrying query after timeout...');
-      
+
       try {
-        const retryStartTime = Date.now();
         const retryResult = await query;
         data = retryResult.data;
         error = retryResult.error;
         count = retryResult.count;
-        
-        const retryTime = Date.now() - retryStartTime;
-        console.log(`[getProducts] Retry succeeded in ${retryTime}ms`);
       } catch (retryError: any) {
         console.error('[getProducts] Retry failed:', retryError?.message);
         throw timeoutError; // Throw original timeout error
@@ -324,12 +313,6 @@ async function getProductsWithSearch(filters: ProductFilters): Promise<Paginated
   
   try {
     [nameResults, descResults] = await Promise.race([queriesPromise, timeoutPromise]);
-    
-    const queryTime = Date.now() - startTime;
-    console.log(`[getProductsWithSearch] Query completed in ${queryTime}ms`, {
-      filters: { ...filters, limit: effectiveLimit },
-      isColdStart: queryTime > 5000,
-    });
   } catch (timeoutError: any) {
     const queryTime = Date.now() - startTime;
     
@@ -345,14 +328,9 @@ async function getProductsWithSearch(filters: ProductFilters): Promise<Paginated
     // Retry once on timeout (cold start mitigation)
     if (!retryAttempted) {
       retryAttempted = true;
-      console.log('[getProductsWithSearch] Retrying query after timeout...');
-      
+
       try {
-        const retryStartTime = Date.now();
         [nameResults, descResults] = await Promise.all([nameQuery, descQuery]);
-        
-        const retryTime = Date.now() - retryStartTime;
-        console.log(`[getProductsWithSearch] Retry succeeded in ${retryTime}ms`);
       } catch (retryError: any) {
         console.error('[getProductsWithSearch] Retry failed:', retryError?.message);
         throw timeoutError; // Throw original timeout error

@@ -53,7 +53,7 @@ Business logic is organized by domain in `apps/web/src/modules/`:
 
 Next.js API routes (`apps/web/src/app/api/`) act as the BFF layer. They:
 - Call Supabase with the service role key (never exposed to the client)
-- Call external APIs (Mercado Pago, Resend, Cloudinary)
+- Call external APIs (Mercado Pago, Cloudinary)
 - Validate webhooks (Mercado Pago uses `MERCADOPAGO_WEBHOOK_SECRET`)
 
 The Supabase client is initialized per-request. There are two clients:
@@ -81,7 +81,7 @@ Supabase (PostgreSQL) with RLS enabled on all tables. No ORM — Supabase JS cli
 Validated at build and runtime using Zod schemas in `apps/web/src/lib/env.ts`. The build will fail if required variables are missing.
 
 - `NEXT_PUBLIC_*` — safe for client exposure (Supabase anon key, Cloudinary, app URL)
-- Server-only — `SUPABASE_SERVICE_ROLE_KEY`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `RESEND_API_KEY`
+- Server-only — `SUPABASE_SERVICE_ROLE_KEY`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`
 
 Copy `.env.example` to `.env.local` to get started.
 
@@ -113,7 +113,7 @@ Todo trabalho não-trivial (feature nova, bugfix complexo, refatoração) segue 
 - **Supabase** — auth, database (PostgreSQL + RLS), realtime subscriptions
 - **Mercado Pago** — payment processing; webhook at `/api/webhooks/mercadopago`
 - **Cloudinary** — image hosting and upload presets
-- **Resend** — transactional email (referenced in env schema; confirm active usage before removing)
+- **Formatação de moeda** — fonte única em `apps/web/src/lib/format.ts` (`formatBRL`). Não criar wrappers locais nem usar `Intl.NumberFormat` direto.
 - **Google Tag Manager** — GTM snippet hardcoded in `apps/web/src/app/layout.tsx` (ID: `GTM-MCVPTPL3`); analytics.ts and GoogleAnalytics component were removed — tracking now goes through GTM only
 
 ## Production Infrastructure (VPS)
@@ -156,7 +156,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 MERCADOPAGO_ACCESS_TOKEN
 MERCADOPAGO_WEBHOOK_SECRET
-RESEND_API_KEY
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
 CLOUDINARY_API_KEY
 CLOUDINARY_API_SECRET

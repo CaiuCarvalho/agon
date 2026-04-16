@@ -251,8 +251,11 @@ export const mercadoPagoService = {
 
     // Parse phone: (XX) XXXXX-XXXX -> area_code: XX, number: XXXXXXXXX
     const phoneMatch = shippingInfo.shippingPhone.match(/\((\d{2})\) (\d{4,5})-(\d{4})/);
-    const areaCode = phoneMatch?.[1] || '';
-    const phoneNumber = phoneMatch ? `${phoneMatch[2]}${phoneMatch[3]}` : '';
+    if (!phoneMatch) {
+      throw new Error(`Invalid phone format: expected "(XX) XXXXX-XXXX", received "${shippingInfo.shippingPhone}"`);
+    }
+    const areaCode = phoneMatch[1];
+    const phoneNumber = `${phoneMatch[2]}${phoneMatch[3]}`;
     
     return {
       items: validatedItems.map((item, index) => ({
