@@ -2,6 +2,20 @@
 
 Histórico de mudanças e features implementadas.
 
+## [2026-04-17] — Staging Environment
+
+### Infraestrutura
+- Novo workflow `.github/workflows/deploy-staging.yml` dispara em push para `staging`, monta `.env.local` a partir dos secrets `STAGING_*` e aciona `deploy-staging.sh` no VPS
+- Novo script `deploy-staging.sh` espelha `deploy.sh` para `/var/www/agon-staging/app/` (PM2 process `agon-web-staging`, porta 30001)
+- `nginx.conf`: adicionados server blocks para `staging.agonimports.com` (HTTP→HTTPS redirect + reverse proxy 443→30001 com SSL Let's Encrypt)
+
+### CI
+- `ci.yml`: testes recebem credenciais Supabase de staging via `STAGING_*`, permitindo que `describe.skipIf(!hasSupabaseEnv)` rode em CI
+
+### Documentação
+- `CLAUDE.md`: nova seção "Ambientes" (tabela dev/staging/prod), fluxo de promoção `staging → main`, bloco "Staging Infrastructure" com provisionamento one-time, secrets `STAGING_*` adicionadas à lista requerida
+- `.env.example`: avisos sobre apontar dev local para staging Supabase + Mercado Pago sandbox
+
 ## [2026-04-16] — Cleanup & Security
 
 ### 🧹 Código Morto Removido

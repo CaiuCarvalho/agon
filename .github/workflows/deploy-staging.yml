@@ -1,0 +1,70 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build .env.local
+        run: |
+          cat > env.staging <<'EOF'
+          NEXT_PUBLIC_SUPABASE_URL=${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY=${{ secrets.STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY=${{ secrets.STAGING_SUPABASE_SERVICE_ROLE_KEY }}
+          MERCADOPAGO_ACCESS_TOKEN=${{ secrets.STAGING_MERCADOPAGO_ACCESS_TOKEN }}
+          MERCADOPAGO_WEBHOOK_SECRET=${{ secrets.STAGING_MERCADOPAGO_WEBHOOK_SECRET }}
+          NEXT_PUBLIC_APP_URL=https://staging.agonimports.com
+          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=${{ secrets.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME }}
+          CLOUDINARY_API_KEY=${{ secrets.CLOUDINARY_API_KEY }}
+          CLOUDINARY_API_SECRET=${{ secrets.CLOUDINARY_API_SECRET }}
+          NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET=${{ secrets.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET }}
+          EOF
+
+      - name: Copy .env to VPS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: env.staging
+          target: /var/www/agon-staging/app/apps/web/
+
+      - name: Run deploy on VPS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          script: |
+            set -e
+            git config --global --add safe.directory /var/www/agon-staging/app
+            cd /var/www/agon-staging/app/apps/web
+            mv env.staging .env.local
+            chmod 600 .env.local
+            cd /var/www/agon-staging/app
+            bash deploy-staging.sh
+
+      - name: Health check
+        run: |
+          for i in $(seq 1 10); do
+            if curl -fsS "${{ secrets.STAGING_HEALTHCHECK_URL }}" > /dev/null; then
+              echo "Staging no ar"
+              exit 0
+            fi
+            echo "Aguardando staging subir... ($i/10)"
+            sleep 6
+          done
+          echo "Health check de staging falhou"
+          exit 1
