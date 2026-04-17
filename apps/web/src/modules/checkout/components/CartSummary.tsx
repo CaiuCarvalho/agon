@@ -1,5 +1,7 @@
 "use client";
 
+import { formatBRL } from "@/lib/format";
+
 interface CartItem {
   id: string;
   productId: string;
@@ -18,13 +20,6 @@ export function CartSummary({ items }: CartSummaryProps) {
   const subtotal = items.reduce((sum, item) => sum + (item.productPrice * item.quantity), 0);
   const shipping = 0; // Free shipping for MVP
   const total = subtotal + shipping;
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
 
   return (
     <div className="bg-gray-50 rounded-lg p-6">
@@ -46,8 +41,8 @@ export function CartSummary({ items }: CartSummaryProps) {
               <p className="text-sm text-gray-600">Qtd: {item.quantity}</p>
             </div>
             <div className="text-right">
-              <p className="text-sm font-medium">{formatCurrency(item.productPrice * item.quantity)}</p>
-              <p className="text-xs text-gray-500">{formatCurrency(item.productPrice)} cada</p>
+              <p className="text-sm font-medium">{formatBRL(item.productPrice * item.quantity)}</p>
+              <p className="text-xs text-gray-500">{formatBRL(item.productPrice)} cada</p>
             </div>
           </div>
         ))}
@@ -56,7 +51,7 @@ export function CartSummary({ items }: CartSummaryProps) {
       <div className="border-t border-gray-200 pt-4 space-y-2">
         <div className="flex justify-between text-sm">
           <span className="text-gray-600">Subtotal ({items.length} {items.length === 1 ? 'item' : 'itens'})</span>
-          <span className="font-medium">{formatCurrency(subtotal)}</span>
+          <span className="font-medium">{formatBRL(subtotal)}</span>
         </div>
         
         <div className="flex justify-between text-sm">
@@ -67,7 +62,7 @@ export function CartSummary({ items }: CartSummaryProps) {
         <div className="border-t border-gray-200 pt-2 mt-2">
           <div className="flex justify-between">
             <span className="text-base font-semibold">Total</span>
-            <span className="text-lg font-bold">{formatCurrency(total)}</span>
+            <span className="text-lg font-bold">{formatBRL(total)}</span>
           </div>
         </div>
       </div>

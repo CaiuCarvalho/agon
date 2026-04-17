@@ -3,12 +3,12 @@
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Search, Loader2, ArrowRight } from "lucide-react";
-import { ProductDTO } from "@/lib/utils";
+import { Product } from "@/modules/products/types";
 
 interface QuickSearchProps {
   isOpen: boolean;
   query: string;
-  results: ProductDTO[];
+  results: Product[];
   isLoading: boolean;
   onClose: () => void;
 }

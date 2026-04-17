@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Order } from '@/modules/admin/types';
+import { formatBRL } from '@/lib/format';
 
 /**
  * Hook for managing browser notifications
@@ -45,16 +46,6 @@ export function useBrowserNotifications() {
   }, []);
   
   /**
-   * Format currency in Brazilian Real
-   */
-  const formatCurrency = (amount: number): string => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL'
-    }).format(amount);
-  };
-  
-  /**
    * Display browser notification for new approved order
    */
   const notifyNewOrder = useCallback((order: Order) => {
@@ -63,7 +54,7 @@ export function useBrowserNotifications() {
       return;
     }
     
-    const amount = formatCurrency(order.totalAmount);
+    const amount = formatBRL(order.totalAmount);
     const orderNumber = order.id.slice(0, 8);
     
     try {

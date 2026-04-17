@@ -2,6 +2,49 @@
 
 Histórico de mudanças e features implementadas.
 
+## [2026-04-17] — Staging Environment
+
+### Infraestrutura
+- Novo workflow `.github/workflows/deploy-staging.yml` dispara em push para `staging`, monta `.env.local` a partir dos secrets `STAGING_*` e aciona `deploy-staging.sh` no VPS
+- Novo script `deploy-staging.sh` espelha `deploy.sh` para `/var/www/agon-staging/app/` (PM2 process `agon-web-staging`, porta 30001)
+- `nginx.conf`: adicionados server blocks para `staging.agonimports.com` (HTTP→HTTPS redirect + reverse proxy 443→30001 com SSL Let's Encrypt)
+
+### CI
+- `ci.yml`: testes recebem credenciais Supabase de staging via `STAGING_*`, permitindo que `describe.skipIf(!hasSupabaseEnv)` rode em CI
+
+### Documentação
+- `CLAUDE.md`: nova seção "Ambientes" (tabela dev/staging/prod), fluxo de promoção `staging → main`, bloco "Staging Infrastructure" com provisionamento one-time, secrets `STAGING_*` adicionadas à lista requerida
+- `.env.example`: avisos sobre apontar dev local para staging Supabase + Mercado Pago sandbox
+
+## [2026-04-16] — Cleanup & Security
+
+### 🧹 Código Morto Removido
+- Removido `apps/web/src/lib/api.ts` (74 linhas, zero imports, referenciava `vitta_token` de projeto anterior)
+- Removido `formatCurrency` quebrado (`$${val}`) de `lib/utils.ts` e tipos `ProductDTO | UserProfile | ShippingAddress = any`
+- Criado `lib/format.ts` com `formatBRL` canônico (`Intl.NumberFormat('pt-BR', { currency: 'BRL' })`)
+- Consolidados 5+ `formatCurrency` duplicados locais para usar `formatBRL`
+- Removido branch morto `if (rpcError)` em `api/checkout/create-order/route.ts`
+- Alinhado `MAX_ITEMS` da Wishlist (20 → 50, batendo com contracts/DB trigger)
+- Substituídos usos de tipos `any` em `Navbar`, `QuickSearch`, `AddressSelector`, `PersonalDataForm` por interfaces reais
+
+### 🔒 Segurança
+- `middleware.ts`: removido `as any` em `Promise.race` + adicionado `clearTimeout` no `finally` para evitar timer vazado
+- `payment/mercadoPagoService.ts`: phone parsing agora lança erro explícito em vez de silenciar (defesa em profundidade)
+- `admin/orderService.ts`: whitelist estrito (`/[^\w\s-]/g`) + cap de 100 chars no `.or()` para prevenir injeção PostgREST
+- `api/webhooks/mercadopago/route.ts`: logs sanitizados — removidos objetos Supabase completos e stack traces
+- `api/checkout/create-order/route.ts`: removidos `error.stack`, `error.cause`, `error.errno` dos logs (mantém `message`)
+
+### 📦 Dependências
+- `npm audit fix` resolveu 2 vulnerabilidades HIGH (Next.js DoS, Fastify body-schema bypass) — 0 restantes
+- Removidas deps não usadas de `apps/api`: `cors`, `dotenv`, `zod`
+- Alinhado `@types/node` para `20.12.7` em web e api
+- Removida referência a `RESEND_API_KEY` de `deploy.yml` (não usado em nenhum lugar)
+
+### 🧪 Testes
+- `checkout-502-error-fix.preservation.test.ts`: atualizado contrato para refletir novo throw de phone parsing (defesa em profundidade)
+- 223 testes passando, 15 skipped (condicionais de env), 0 falhando
+- SDD audit: **98/100 APROVADO**
+
 ## [Unreleased] - 2025-04-06
 
 ### 🎉 Novas Features

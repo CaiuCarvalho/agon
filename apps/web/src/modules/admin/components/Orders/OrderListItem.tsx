@@ -1,6 +1,7 @@
 'use client';
 
 import type { OrderWithDetails, ShippingStatus } from '../../types';
+import { formatBRL } from '@/lib/format';
 
 interface Props {
   order: OrderWithDetails;
@@ -26,9 +27,6 @@ function timeAgo(iso: string): string {
   return `${days}d`;
 }
 
-function formatBRL(v: number) {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
-}
 
 export function OrderListItem({ order, selected, onClick }: Props) {
   const paymentPending = order.payment.status === 'pending';

@@ -177,7 +177,6 @@ export function useRealtimeOrders(
           if (status === 'SUBSCRIBED') {
             setStatus('connected');
             reconnectAttemptsRef.current = 0; // Reset attempts on successful connection
-            console.log('[useRealtimeOrders] Successfully subscribed to admin-orders channel');
           } else if (status === 'CHANNEL_ERROR') {
             setStatus('error');
             console.error('[useRealtimeOrders] Channel error');
@@ -215,11 +214,7 @@ export function useRealtimeOrders(
     
     const delay = getBackoffDelay(reconnectAttemptsRef.current);
     reconnectAttemptsRef.current += 1;
-    
-    console.log(
-      `[useRealtimeOrders] Reconnecting in ${delay}ms (attempt ${reconnectAttemptsRef.current}/${maxReconnectAttempts})`
-    );
-    
+
     // Clear any existing timeout
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
@@ -251,7 +246,6 @@ export function useRealtimeOrders(
    * Manual reconnect function
    */
   const reconnect = useCallback(() => {
-    console.log('[useRealtimeOrders] Manual reconnect triggered');
     reconnectAttemptsRef.current = 0; // Reset attempts on manual reconnect
     cleanup();
     setupSubscription();

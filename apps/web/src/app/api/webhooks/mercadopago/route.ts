@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         paymentId
       );
     } catch (error) {
-      console.error('[Webhook] Signature validation error:', { error, correlationId });
+      console.error('[Webhook] Signature validation error:', { error: (error as Error).message, correlationId });
       return NextResponse.json(
         { error: 'Signature validation failed' },
         { status: 401 }
@@ -84,7 +84,7 @@ export async function POST(request: NextRequest) {
     try {
       paymentDetails = await mercadoPagoService.getPaymentDetails(paymentId);
     } catch (error: any) {
-      console.error('[Webhook] Failed to fetch payment details:', { error, correlationId });
+      console.error('[Webhook] Failed to fetch payment details:', { error: (error as Error).message, correlationId });
       return NextResponse.json(
         { error: 'Failed to fetch payment details' },
         { status: 500 }
@@ -95,7 +95,6 @@ export async function POST(request: NextRequest) {
       paymentId: paymentDetails.id,
       status: paymentDetails.status,
       paymentMethod: paymentDetails.payment_method_id,
-      externalReference: paymentDetails.external_reference,
       correlationId,
     });
     
@@ -109,8 +108,8 @@ export async function POST(request: NextRequest) {
     
     if (paymentError || !payment) {
       console.error('[Webhook] Payment not found in database:', {
-        externalReference: paymentDetails.external_reference,
-        error: paymentError,
+        paymentId: paymentDetails.id,
+        error: paymentError?.message,
         correlationId,
       });
       return NextResponse.json(
@@ -163,7 +162,7 @@ export async function POST(request: NextRequest) {
 
       if (seedPaymentIdError) {
         console.error('[Webhook] Failed to seed Mercado Pago payment ID:', {
-          error: seedPaymentIdError,
+          error: seedPaymentIdError.message,
           paymentId: payment.id,
           correlationId,
         });
@@ -221,7 +220,7 @@ export async function POST(request: NextRequest) {
 
       if (rpcError) {
         console.error('[Webhook] RPC function returned error:', {
-          error: rpcError,
+          error: rpcError.message,
           correlationId,
         });
         throw rpcError;
@@ -255,9 +254,7 @@ export async function POST(request: NextRequest) {
     } catch (error: any) {
       console.error('[Webhook] Failed to update payment status:', {
         error: error.message,
-        stack: error.stack,
         paymentId: payment.id,
-        orderId: payment.order_id,
         correlationId,
       });
       
@@ -269,8 +266,8 @@ export async function POST(request: NextRequest) {
     }
     
   } catch (error: any) {
-    console.error('[Webhook] Unexpected error:', error);
-    
+    console.error('[Webhook] Unexpected error:', { error: error.message });
+
     // Return 500 so Mercado Pago retries
     return NextResponse.json(
       { error: 'Internal server error' },

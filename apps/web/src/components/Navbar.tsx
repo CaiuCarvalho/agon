@@ -10,7 +10,7 @@ import Sidebar from "./Sidebar";
 import QuickSearch from "./QuickSearch";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { Logo } from "./ui/Logo";
-import { ProductDTO } from "@/lib/utils";
+import { Product } from "@/modules/products/types";
 import { buildApiUrl } from "@/lib/url";
 
 const navLinks = [
@@ -31,7 +31,7 @@ const Navbar = () => {
   // Search States
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [searchResults, setSearchResults] = useState<ProductDTO[]>([]);
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isSearchLoading, setIsSearchLoading] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
