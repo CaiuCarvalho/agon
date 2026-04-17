@@ -5,6 +5,9 @@ import { isAdminRole } from '@/lib/auth/roles'
 function redirectToLogin(request: NextRequest) {
   const redirectUrl = request.nextUrl.clone()
   redirectUrl.pathname = '/login'
+  // request.nextUrl.pathname is a server-internal path (always relative, never
+  // user-supplied), so it is safe to pass as the redirect param. The login page
+  // currently does NOT read this param — it is kept here for future use.
   redirectUrl.searchParams.set('redirect', request.nextUrl.pathname)
   return NextResponse.redirect(redirectUrl)
 }
@@ -41,43 +44,47 @@ export async function middleware(request: NextRequest) {
       }
     )
 
-    // Add timeout to prevent hanging
+    // Add timeout to prevent hanging; clean up the timer regardless of outcome.
+    let timeoutId: ReturnType<typeof setTimeout> | undefined
     const sessionPromise = supabase.auth.getSession()
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Session timeout')), 5000)
-    )
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error('Session timeout')), 5000)
+    })
 
-    const {
-      data: { session },
-    } = await Promise.race([sessionPromise, timeoutPromise]) as any
+    try {
+      const result = await Promise.race([sessionPromise, timeoutPromise])
+      const { data: { session } } = result
 
-    // Proteger rotas /admin e /perfil
-    if (
-      (path.startsWith('/admin') || path.startsWith('/perfil')) &&
-      !session
-    ) {
-      return redirectToLogin(request)
-    }
-
-    // Proteger /admin apenas para role admin
-    if (path.startsWith('/admin') && session) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', session.user.id)
-        .single()
-
-      const isAdmin = isAdminRole({
-        profileRole: profile?.role,
-        metadataRole: session.user.user_metadata?.role,
-      })
-
-      if (!isAdmin) {
-        return NextResponse.redirect(new URL('/', request.url))
+      // Proteger rotas /admin e /perfil
+      if (
+        (path.startsWith('/admin') || path.startsWith('/perfil')) &&
+        !session
+      ) {
+        return redirectToLogin(request)
       }
-    }
 
-    return supabaseResponse
+      // Proteger /admin apenas para role admin
+      if (path.startsWith('/admin') && session) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('role')
+          .eq('id', session.user.id)
+          .single()
+
+        const isAdmin = isAdminRole({
+          profileRole: profile?.role,
+          metadataRole: session.user.user_metadata?.role,
+        })
+
+        if (!isAdmin) {
+          return NextResponse.redirect(new URL('/', request.url))
+        }
+      }
+
+      return supabaseResponse
+    } finally {
+      if (timeoutId) clearTimeout(timeoutId)
+    }
   } catch (error) {
     const elapsed = Date.now() - startTime;
     console.error(`[MW] ${path} - ERROR after ${elapsed}ms:`, error);

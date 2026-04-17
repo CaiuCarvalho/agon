@@ -91,8 +91,13 @@ export async function listOrders(filters: OrderFiltersInput): Promise<ServiceRes
       query = query.eq('shipping_status', shippingStatus);
     }
     if (search) {
-      const escaped = search.replace(/[%,()]/g, '');
-      query = query.or(`shipping_name.ilike.%${escaped}%,id.ilike.${escaped}%`);
+      // Whitelist: keep only alphanumerics, spaces, and hyphens to prevent
+      // PostgREST operator injection. Zod already enforces max(200) upstream;
+      // we additionally cap at 100 chars here as a defence-in-depth measure.
+      const clean = search.replace(/[^\w\s-]/g, '').slice(0, 100);
+      if (clean.length > 0) {
+        query = query.or(`shipping_name.ilike.%${clean}%,id.ilike.${clean}%`);
+      }
     }
 
     // Execute query with pagination

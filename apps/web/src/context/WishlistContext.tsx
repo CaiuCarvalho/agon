@@ -27,7 +27,7 @@ export function useWishlist(): WishlistContextValue {
   return ctx;
 }
 
-const MAX_ITEMS = 20;
+const MAX_ITEMS = 50;
 const STORAGE_KEY = "agon-wishlist";
 
 export function WishlistProvider({ children }: { children: React.ReactNode }) {

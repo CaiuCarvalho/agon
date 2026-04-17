@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { formatBRL } from '@/lib/format';
 import { OrderWithItems } from '../services/orderService';
 
 interface OrderConfirmationClientProps {
@@ -10,13 +11,6 @@ interface OrderConfirmationClientProps {
 
 export function OrderConfirmationClient({ order }: OrderConfirmationClientProps) {
   const [copied, setCopied] = useState(false);
-
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(value);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('pt-BR', {
@@ -107,11 +101,11 @@ export function OrderConfirmationClient({ order }: OrderConfirmationClientProps)
                       Tamanho: {item.size} • Quantidade: {item.quantity}
                     </p>
                     <p className="text-sm text-gray-600">
-                      {formatCurrency(item.productPrice)} cada
+                      {formatBRL(item.productPrice)} cada
                     </p>
                   </div>
                   <p className="font-medium text-gray-900">
-                    {formatCurrency(item.subtotal)}
+                    {formatBRL(item.subtotal)}
                   </p>
                 </div>
               ))}
@@ -123,7 +117,7 @@ export function OrderConfirmationClient({ order }: OrderConfirmationClientProps)
             <div className="flex justify-between items-center">
               <span className="text-lg font-semibold text-gray-900">Total</span>
               <span className="text-2xl font-bold text-gray-900">
-                {formatCurrency(order.totalAmount)}
+                {formatBRL(order.totalAmount)}
               </span>
             </div>
           </div>

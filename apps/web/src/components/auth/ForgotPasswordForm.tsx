@@ -43,20 +43,20 @@ export function ForgotPasswordForm({ onSuccess, onBack }: ForgotPasswordFormProp
   async function onSubmit(data: ForgotPasswordValues) {
     setIsLoading(true);
     try {
-      const response = await fetch(buildApiUrl("/auth/forgot-password"), {
+      await fetch(buildApiUrl("/auth/forgot-password"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
 
-      if (!response.ok) {
-        throw new Error("Erro ao solicitar recuperação.");
-      }
-
-      toast.success("Código enviado! Verifique seu e-mail.");
+      // Always show a generic message regardless of whether the email exists,
+      // to prevent user enumeration via different success/error responses.
+      toast.success("Se o e-mail existir, você receberá um código em breve.");
       onSuccess(data.email);
-    } catch (error) {
-      toast.error("Erro ao processar solicitação. Tente novamente.");
+    } catch {
+      // Only surface genuine network/fetch failures — never distinguish
+      // "email found" from "email not found".
+      toast.error("Não foi possível conectar ao servidor. Verifique sua conexão e tente novamente.");
     } finally {
       setIsLoading(false);
     }

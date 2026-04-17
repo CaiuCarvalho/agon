@@ -53,7 +53,7 @@ Business logic is organized by domain in `apps/web/src/modules/`:
 
 Next.js API routes (`apps/web/src/app/api/`) act as the BFF layer. They:
 - Call Supabase with the service role key (never exposed to the client)
-- Call external APIs (Mercado Pago, Resend, Cloudinary)
+- Call external APIs (Mercado Pago, Cloudinary)
 - Validate webhooks (Mercado Pago uses `MERCADOPAGO_WEBHOOK_SECRET`)
 
 The Supabase client is initialized per-request. There are two clients:
@@ -81,7 +81,7 @@ Supabase (PostgreSQL) with RLS enabled on all tables. No ORM — Supabase JS cli
 Validated at build and runtime using Zod schemas in `apps/web/src/lib/env.ts`. The build will fail if required variables are missing.
 
 - `NEXT_PUBLIC_*` — safe for client exposure (Supabase anon key, Cloudinary, app URL)
-- Server-only — `SUPABASE_SERVICE_ROLE_KEY`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`, `RESEND_API_KEY`
+- Server-only — `SUPABASE_SERVICE_ROLE_KEY`, `MERCADOPAGO_ACCESS_TOKEN`, `MERCADOPAGO_WEBHOOK_SECRET`
 
 Copy `.env.example` to `.env.local` to get started.
 
@@ -113,8 +113,20 @@ Todo trabalho não-trivial (feature nova, bugfix complexo, refatoração) segue 
 - **Supabase** — auth, database (PostgreSQL + RLS), realtime subscriptions
 - **Mercado Pago** — payment processing; webhook at `/api/webhooks/mercadopago`
 - **Cloudinary** — image hosting and upload presets
-- **Resend** — transactional email (referenced in env schema; confirm active usage before removing)
+- **Formatação de moeda** — fonte única em `apps/web/src/lib/format.ts` (`formatBRL`). Não criar wrappers locais nem usar `Intl.NumberFormat` direto.
 - **Google Tag Manager** — GTM snippet hardcoded in `apps/web/src/app/layout.tsx` (ID: `GTM-MCVPTPL3`); analytics.ts and GoogleAnalytics component were removed — tracking now goes through GTM only
+
+## Ambientes
+
+| Ambiente | URL | Branch | VPS dir | PM2 process | Porta Next | Supabase | Mercado Pago |
+|---|---|---|---|---|---|---|---|
+| dev local | `http://localhost:3000` | qualquer | — | — | 3000 | staging | sandbox |
+| staging | `https://staging.agonimports.com` | `staging` | `/var/www/agon-staging/app/` | `agon-web-staging` | 30001 | staging | sandbox |
+| produção | `https://agonimports.com` | `main` | `/var/www/agon/app/` | `agon-web` | 30000 | produção | produção |
+
+**Fluxo de promoção:** PR → `staging` → QA em `staging.agonimports.com` → PR `staging` → `main` → deploy de produção. Nunca pushar direto para `main`.
+
+**Desenvolvimento local:** `apps/web/.env.local` deve apontar para o projeto Supabase **de staging** (credenciais `STAGING_*`), nunca para produção. Usar token sandbox (`TEST-*`) do Mercado Pago.
 
 ## Production Infrastructure (VPS)
 
@@ -144,9 +156,10 @@ Todo trabalho não-trivial (feature nova, bugfix complexo, refatoração) segue 
 - Static assets cached 60 min (`/_next/static`)
 
 ### CI/CD (GitHub Actions)
-- **CI** (`.github/workflows/ci.yml`): typecheck + audit SDD + tests on push/PR to `main`
-- **Deploy** (`.github/workflows/deploy.yml`): on push to `main` — builds `.env.local` from GitHub secrets, SCPs to VPS, SSHs to run `deploy.sh`, health checks `HEALTHCHECK_URL`
-- **deploy.sh**: `git fetch + reset --hard`, `npm ci`, `npm run build`, `pm2 reload`
+- **CI** (`.github/workflows/ci.yml`): typecheck + audit SDD + tests on push/PR to `main`. Tests receive `STAGING_*` Supabase credentials, so `skipIf(!hasSupabaseEnv)` integration tests run against the staging project.
+- **Deploy prod** (`.github/workflows/deploy.yml`): on push to `main` — builds `.env.local` from GitHub secrets, SCPs to VPS, SSHs to run `deploy.sh`, health checks `HEALTHCHECK_URL`
+- **Deploy staging** (`.github/workflows/deploy-staging.yml`): on push to `staging` — same flow as prod using `STAGING_*` secrets, targets `/var/www/agon-staging/app/`, runs `deploy-staging.sh`, health checks `STAGING_HEALTHCHECK_URL`
+- **deploy.sh / deploy-staging.sh**: `git fetch + reset --hard`, `npm ci`, `npm run build`, `pm2 reload`
 
 ### GitHub Actions Secrets required
 All must be set at `github.com/CaiuCarvalho/agon/settings/secrets/actions`:
@@ -156,7 +169,6 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY
 SUPABASE_SERVICE_ROLE_KEY
 MERCADOPAGO_ACCESS_TOKEN
 MERCADOPAGO_WEBHOOK_SECRET
-RESEND_API_KEY
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
 CLOUDINARY_API_KEY
 CLOUDINARY_API_SECRET
@@ -166,11 +178,57 @@ VPS_USER          # root
 VPS_PORT          # SSH port
 VPS_SSH_KEY       # private key of ~/.ssh/github_actions on VPS
 HEALTHCHECK_URL   # https://agonimports.com/api/health
+
+# Staging (mirrors the prod set, prefixed with STAGING_)
+STAGING_NEXT_PUBLIC_SUPABASE_URL
+STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY
+STAGING_SUPABASE_SERVICE_ROLE_KEY
+STAGING_MERCADOPAGO_ACCESS_TOKEN      # TEST-* (Mercado Pago sandbox)
+STAGING_MERCADOPAGO_WEBHOOK_SECRET    # distinct from prod
+STAGING_HEALTHCHECK_URL               # https://staging.agonimports.com/api/health
 ```
-> `NEXT_PUBLIC_APP_URL` is hardcoded as `https://agonimports.com` in the workflow (not a secret).
+> `NEXT_PUBLIC_APP_URL` is hardcoded as `https://agonimports.com` (prod) and `https://staging.agonimports.com` (staging) in the respective workflows (not secrets). Cloudinary credentials are shared between environments.
 
 ### Deploy workflow caveat
 The deploy workflow **overwrites** `.env.local` on every run from GitHub secrets. Any variable not in secrets will be wiped. Keep all required env vars as secrets — do not rely on manual edits to `.env.local` on the VPS persisting across deploys.
+
+## Staging Infrastructure (same VPS)
+
+Staging shares host/user with production but lives in a separate directory and
+PM2 process.
+
+- **App dir:** `/var/www/agon-staging/app/` (git clone, branch `staging`)
+- **Web working dir:** `/var/www/agon-staging/app/apps/web/` (PM2 cwd)
+- **`.env.local`:** `/var/www/agon-staging/app/apps/web/.env.local`
+- **PM2 process:** `agon-web-staging`, fork mode, port **30001**
+- **Nginx:** `staging.agonimports.com` → `443 → localhost:30001`, SSL via
+  Let's Encrypt (`/etc/letsencrypt/live/staging.agonimports.com/`)
+- **Start/reload:** `pm2 reload agon-web-staging --update-env`
+
+### First-time staging VPS provisioning
+
+Run once on the VPS as `root`:
+
+```bash
+# 1. DNS (no provider): A record  staging.agonimports.com → 187.127.13.56
+
+# 2. SSL cert
+certbot --nginx -d staging.agonimports.com
+
+# 3. Clone repo on the staging branch
+mkdir -p /var/www/agon-staging
+cd /var/www/agon-staging
+git clone https://github.com/CaiuCarvalho/agon.git app
+cd app && git checkout staging
+
+# 4. Start the PM2 process (deploy-staging.sh will reuse it afterwards)
+cd /var/www/agon-staging/app/apps/web
+pm2 start npm --name agon-web-staging -- run start -- -p 30001
+pm2 save
+
+# 5. Reload nginx after adding the staging server blocks from nginx.conf
+nginx -t && systemctl reload nginx
+```
 
 ## Monorepo Notes
 

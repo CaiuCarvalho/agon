@@ -1,7 +1,11 @@
 "use client";
 
-import { UserProfile } from "@/lib/utils";
 import { maskCPF, maskPhone } from "@/utils/validation";
+
+interface UserProfile {
+  taxId?: string | null;
+  phone?: string | null;
+}
 
 interface PersonalDataFormProps {
   userProfile: UserProfile | null;

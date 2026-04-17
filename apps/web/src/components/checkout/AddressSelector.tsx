@@ -3,8 +3,18 @@
 import { useState } from "react";
 import { Plus, Check, Loader2, ArrowLeft } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShippingAddress } from "@/lib/utils";
 import { maskCEP } from "@/utils/validation";
+
+interface ShippingAddress {
+  id?: string;
+  street: string;
+  number: string;
+  complement?: string;
+  neighborhood: string;
+  city: string;
+  state: string;
+  zipCode: string;
+}
 
 interface AddressSelectorProps {
   addresses: ShippingAddress[];

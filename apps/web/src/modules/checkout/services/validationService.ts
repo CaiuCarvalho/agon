@@ -6,6 +6,7 @@
  */
 
 import { cepSchema, phoneSchema, BRAZILIAN_STATES } from '@/modules/payment/contracts';
+import { formatBRL } from '@/lib/format';
 
 export const validationService = {
   /**
@@ -41,10 +42,7 @@ export const validationService = {
    * Format currency as Brazilian Real
    */
   formatCurrency(amount: number): string {
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-    }).format(amount);
+    return formatBRL(amount);
   },
 
   /**
