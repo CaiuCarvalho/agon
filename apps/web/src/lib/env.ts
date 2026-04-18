@@ -169,9 +169,19 @@ if (typeof window === 'undefined') {
   try {
     validateEnvironment();
   } catch (error) {
-    console.error('Environment validation failed on server startup:', error);
-    // Don't throw in production to allow graceful degradation
-    if (process.env.NODE_ENV === 'development') {
+    // Log structured context (no values) so the failure is visible in pm2 logs.
+    // Re-throw in production and development; only swallow in `test` so vitest
+    // can import modules that depend on env without setting every var.
+    console.error('[env] validation failed on server startup', {
+      nodeEnv: process.env.NODE_ENV,
+      hasSupabaseUrl:
+        !!process.env.SUPABASE_URL || !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+      hasSupabaseAnonKey:
+        !!process.env.SUPABASE_ANON_KEY || !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+      hasServiceRoleKey: !!process.env.SUPABASE_SERVICE_ROLE_KEY,
+      message: error instanceof Error ? error.message : String(error),
+    });
+    if (process.env.NODE_ENV !== 'test') {
       throw error;
     }
   }

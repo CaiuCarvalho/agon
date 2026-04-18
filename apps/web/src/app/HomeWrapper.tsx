@@ -1,34 +1,28 @@
 import { getProducts } from '@/modules/products/services/productService';
+import { createClient } from '@/lib/supabase/server';
 import Home from './HomeClient';
 import type { Product } from '@/modules/products/types';
 
-/**
- * Server Component Wrapper for Home Page
- * 
- * This component fetches products server-side to:
- * 1. Eliminate cold start on client (server warms up database)
- * 2. Provide initial data immediately (no loading state)
- * 3. Improve perceived performance
- * 
- * The actual page with client-side features (framer-motion, useAuth)
- * is in HomeClient.tsx
- */
 export default async function HomeWrapper() {
   let initialProducts: Product[] | undefined;
   let productsError: string | null = null;
 
+  const startTime = Date.now();
   try {
-    console.log('[HomeWrapper] Fetching products server-side...');
-    const startTime = Date.now();
-    
-    const result = await getProducts({ limit: 16, sortBy: 'latest' });
+    const supabase = await createClient();
+    const result = await getProducts(supabase, { limit: 16, sortBy: 'latest' });
     initialProducts = result.products;
-    
-    const fetchTime = Date.now() - startTime;
-    console.log(`[HomeWrapper] Products fetched in ${fetchTime}ms (server-side)`);
   } catch (error: any) {
-    console.error('[HomeWrapper] Failed to fetch products server-side:', error.message);
-    productsError = error.message || 'Failed to load products';
+    console.error('[products] fetch failed', {
+      page: 'home',
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      nodeEnv: process.env.NODE_ENV,
+      durationMs: Date.now() - startTime,
+      code: error?.code,
+      message: error?.message,
+      hint: error?.hint,
+    });
+    productsError = error?.message || 'Failed to load products';
   }
 
   return <Home initialProducts={initialProducts} productsError={productsError} />;

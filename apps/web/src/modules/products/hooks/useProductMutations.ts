@@ -8,6 +8,7 @@ import {
   softDeleteProduct,
   restoreProduct,
 } from '../services/productService';
+import { createClient } from '@/lib/supabase/client';
 import type { Product, ProductFormValues, PaginatedProducts } from '../types';
 
 /**
@@ -47,7 +48,7 @@ export function useProductMutations() {
    * Validates Requirements: 4.9, 4.10, 4.11, 17.1, 17.2, 17.7
    */
   const createProductMutation = useMutation({
-    mutationFn: createProduct,
+    mutationFn: (values: ProductFormValues) => createProduct(createClient(), values),
     
     onMutate: async (newProduct: ProductFormValues) => {
       // Cancel outgoing refetches to prevent race conditions
@@ -114,11 +115,11 @@ export function useProductMutations() {
    * Validates Requirements: 5.5, 5.6, 5.7, 5.8, 5.9, 5.10, 17.3, 17.4, 17.7
    */
   const updateProductMutation = useMutation({
-    mutationFn: ({ id, values, currentUpdatedAt }: { 
-      id: string; 
+    mutationFn: ({ id, values, currentUpdatedAt }: {
+      id: string;
       values: Partial<ProductFormValues>;
       currentUpdatedAt?: string;
-    }) => updateProduct(id, values, currentUpdatedAt),
+    }) => updateProduct(createClient(), id, values, currentUpdatedAt),
     
     onMutate: async ({ id, values }) => {
       // Cancel outgoing refetches to prevent race conditions
@@ -190,7 +191,7 @@ export function useProductMutations() {
    * Validates Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 17.5, 17.6, 17.7
    */
   const softDeleteProductMutation = useMutation({
-    mutationFn: softDeleteProduct,
+    mutationFn: (id: string) => softDeleteProduct(createClient(), id),
     
     onMutate: async (id: string) => {
       // Cancel outgoing refetches to prevent race conditions
@@ -243,7 +244,7 @@ export function useProductMutations() {
    * Validates Requirements: 6.9, 6.10
    */
   const restoreProductMutation = useMutation({
-    mutationFn: restoreProduct,
+    mutationFn: (id: string) => restoreProduct(createClient(), id),
     
     onSuccess: () => {
       toast.success('Produto restaurado com sucesso');

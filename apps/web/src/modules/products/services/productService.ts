@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import { productSchema } from '../schemas';
 import type {
   Product,
@@ -94,8 +94,10 @@ function transformProductRow(row: DatabaseProductRow): Product {
  * 
  * Validates Requirements: 8.1-8.12, 9.1-9.10, 10.1-10.8
  */
-export async function getProducts(filters: ProductFilters = {}): Promise<PaginatedProducts> {
-  const supabase = createClient();
+export async function getProducts(
+  supabase: SupabaseClient,
+  filters: ProductFilters = {}
+): Promise<PaginatedProducts> {
   const {
     search,
     categoryId,
@@ -113,7 +115,7 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
   // If search is provided, we need to use a different approach
   // because we need to search both name AND description with full-text search
   if (search && search.trim()) {
-    return await getProductsWithSearch({ ...filters, limit: effectiveLimit });
+    return await getProductsWithSearch(supabase, { ...filters, limit: effectiveLimit });
   }
 
   // Start building query with explicit field selection (no SELECT *)
@@ -213,10 +215,14 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
   }
 
   if (error) {
-    console.error('[getProducts] Supabase error:', {
+    console.error('[products] fetch failed', {
+      page: 'service:getProducts',
       filters,
-      error: error.message,
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      nodeEnv: process.env.NODE_ENV,
       code: error.code,
+      message: error.message,
+      hint: (error as any).hint,
     });
     throw new Error(`Failed to fetch products: ${error.message}`);
   }
@@ -245,8 +251,10 @@ export async function getProducts(filters: ProductFilters = {}): Promise<Paginat
  * 
  * CRITICAL: Uses to_tsvector NOT ILIKE for better performance and language support
  */
-async function getProductsWithSearch(filters: ProductFilters): Promise<PaginatedProducts> {
-  const supabase = createClient();
+async function getProductsWithSearch(
+  supabase: SupabaseClient,
+  filters: ProductFilters
+): Promise<PaginatedProducts> {
   const {
     search,
     categoryId,
@@ -402,9 +410,10 @@ async function getProductsWithSearch(filters: ProductFilters): Promise<Paginated
  * 
  * Validates Requirements: 8.1, 8.2
  */
-export async function getProductById(id: string): Promise<Product | null> {
-  const supabase = createClient();
-
+export async function getProductById(
+  supabase: SupabaseClient,
+  id: string
+): Promise<Product | null> {
   const { data, error } = await supabase
     .from('products')
     .select('*, category:categories(*)')
@@ -430,9 +439,10 @@ export async function getProductById(id: string): Promise<Product | null> {
  * 
  * Validates Requirements: 4.1-4.10
  */
-export async function createProduct(values: ProductFormValues): Promise<Product> {
-  const supabase = createClient();
-
+export async function createProduct(
+  supabase: SupabaseClient,
+  values: ProductFormValues
+): Promise<Product> {
   // Validate with Zod
   const validated = productSchema.parse(values);
 
@@ -467,12 +477,11 @@ export async function createProduct(values: ProductFormValues): Promise<Product>
  * Validates Requirements: 5.1-5.10
  */
 export async function updateProduct(
+  supabase: SupabaseClient,
   id: string,
   values: Partial<ProductFormValues>,
   currentUpdatedAt?: string
 ): Promise<Product> {
-  const supabase = createClient();
-
   // Validate with Zod (partial)
   const validated = productSchema.partial().parse(values);
 
@@ -519,9 +528,10 @@ export async function updateProduct(
  * 
  * Validates Requirements: 6.1-6.10
  */
-export async function softDeleteProduct(id: string): Promise<void> {
-  const supabase = createClient();
-
+export async function softDeleteProduct(
+  supabase: SupabaseClient,
+  id: string
+): Promise<void> {
   const { error } = await supabase
     .from('products')
     .update({ deleted_at: new Date().toISOString() })
@@ -540,9 +550,10 @@ export async function softDeleteProduct(id: string): Promise<void> {
  * 
  * Validates Requirements: 6.9, 6.10
  */
-export async function restoreProduct(id: string): Promise<Product> {
-  const supabase = createClient();
-
+export async function restoreProduct(
+  supabase: SupabaseClient,
+  id: string
+): Promise<Product> {
   const { data, error } = await supabase
     .from('products')
     .update({ deleted_at: null })
@@ -565,9 +576,7 @@ export async function restoreProduct(id: string): Promise<Product> {
  * 
  * Validates Requirements: 6.9
  */
-export async function getDeletedProducts(): Promise<Product[]> {
-  const supabase = createClient();
-
+export async function getDeletedProducts(supabase: SupabaseClient): Promise<Product[]> {
   const { data, error } = await supabase
     .from('products')
     .select('*, category:categories(*)')

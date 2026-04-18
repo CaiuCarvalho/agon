@@ -2,6 +2,7 @@
 
 import { useQuery, UseQueryResult } from '@tanstack/react-query';
 import { getProducts, getProductById } from '../services/productService';
+import { createClient } from '@/lib/supabase/client';
 import type { ProductFilters, PaginatedProducts, Product } from '../types';
 
 /**
@@ -34,7 +35,7 @@ import type { ProductFilters, PaginatedProducts, Product } from '../types';
 export function useProducts(filters: ProductFilters = {}): UseQueryResult<PaginatedProducts, Error> {
   return useQuery<PaginatedProducts, Error>({
     queryKey: ['products', filters],
-    queryFn: () => getProducts(filters),
+    queryFn: () => getProducts(createClient(), filters),
     // Retry configuration for resilience
     retry: 2, // Retry up to 2 times on error
     retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000), // Exponential backoff (1s, 2s, max 30s)
@@ -71,7 +72,7 @@ export function useProducts(filters: ProductFilters = {}): UseQueryResult<Pagina
 export function useProduct(id?: string): UseQueryResult<Product | null, Error> {
   return useQuery<Product | null, Error>({
     queryKey: ['products', id],
-    queryFn: () => getProductById(id!),
+    queryFn: () => getProductById(createClient(), id!),
     enabled: !!id,
   });
 }
