@@ -7,6 +7,7 @@ import Hero from "@/components/Hero";
 import CategoryBanners from "@/components/CategoryBanners";
 import { ProductsCarousel } from "@/components/ProductsCarousel";
 import Testimonials from "@/components/Testimonials";
+import WorldCupCountdown from "@/components/WorldCupCountdown";
 import { Truck, ShieldCheck, RefreshCcw, Zap, Star, Users } from "lucide-react";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
@@ -209,29 +210,8 @@ export default function Home({ initialProducts, productsError }: HomeProps) {
         </div>
       </section>
 
-      {/* Mini Banner: Rumos a 2026 (Imagem 1 HD) */}
-      <section className="py-20 bg-muted/5 border-b border-border/20">
-        <div className="container mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-12">
-          <div className="flex items-center gap-10 text-center md:text-left">
-            <div className="relative h-28 w-40">
-              <Image 
-                src="https://res.cloudinary.com/dbcy4h37x/image/upload/v1775188056/ikq1whvviiqvpsoiuxpp.jpg" 
-                className="invert brightness-0 object-contain" 
-                fill
-                sizes="160px"
-                alt="2026 Logo" 
-              />
-            </div>
-            <div>
-              <p className="text-primary font-black uppercase tracking-widest text-xs mb-1">Coming Next</p>
-              <h3 className="text-3xl font-display font-black uppercase tracking-tighter italic leading-none">O FUTURO <br /> É AGORA</h3>
-            </div>
-          </div>
-          <p className="text-muted-foreground text-sm max-w-sm text-center md:text-left leading-relaxed">
-            Agon já está preparando a coleção oficial para o maior espetáculo da Terra em 2026. Tecnologia NASA, alma brasileira. Esteja pronto.
-          </p>
-        </div>
-      </section>
+      {/* Contagem regressiva para a Copa do Mundo 2026 */}
+      <WorldCupCountdown />
 
       <Testimonials />
     </main>
