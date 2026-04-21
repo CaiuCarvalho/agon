@@ -4,6 +4,7 @@ import ClientActions from "./ClientActions";
 
 async function getProduct(id: string) {
   const supabase = await createClient();
+  const startTime = Date.now();
 
   const { data, error } = await supabase
     .from('products')
@@ -12,7 +13,19 @@ async function getProduct(id: string) {
     .is('deleted_at', null)
     .single();
 
-  if (error || !data) {
+  if (error) {
+    if (error.code !== 'PGRST116') {
+      console.error('[products] fetch failed', {
+        page: 'detail',
+        productId: id,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        nodeEnv: process.env.NODE_ENV,
+        durationMs: Date.now() - startTime,
+        code: error.code,
+        message: error.message,
+        hint: error.hint,
+      });
+    }
     return null;
   }
 

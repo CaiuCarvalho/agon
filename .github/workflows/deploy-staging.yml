@@ -15,12 +15,39 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # TODO: re-enable Supabase migrations step.
-      # `supabase db push --project-ref <ref>` was removed from the CLI;
-      # the new flow is `supabase link --project-ref <ref>` + `supabase db
-      # push --linked`, which also requires SUPABASE_DB_PASSWORD as a
-      # secret. Tracked as a separate spec. For now staging migrations
-      # are applied manually in the Supabase dashboard.
+      # Aplica migrações Supabase antes do deploy.
+      # Roda SOMENTE se STAGING_SUPABASE_DB_PASSWORD estiver presente.
+      # Se o secret não estiver configurado, o passo é pulado e o restante
+      # do deploy continua normal (aplicação manual via Dashboard segue sendo
+      # o fallback, como documentado em supabase/ALL_MIGRATIONS_BUNDLE.sql).
+      - name: Check Supabase migration secrets
+        id: check_supabase_secrets
+        env:
+          DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.STAGING_SUPABASE_PROJECT_REF }}
+        run: |
+          if [ -n "$DB_PASSWORD" ] && [ -n "$PROJECT_REF" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Supabase migrations step skipped — STAGING_SUPABASE_DB_PASSWORD e/ou STAGING_SUPABASE_PROJECT_REF não configurados."
+          fi
+
+      - name: Setup Supabase CLI
+        if: steps.check_supabase_secrets.outputs.enabled == 'true'
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Apply Supabase migrations (staging)
+        if: steps.check_supabase_secrets.outputs.enabled == 'true'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.STAGING_SUPABASE_DB_PASSWORD }}
+          PROJECT_REF: ${{ secrets.STAGING_SUPABASE_PROJECT_REF }}
+        run: |
+          supabase link --project-ref "$PROJECT_REF"
+          supabase db push --linked
 
       - name: Build .env.local (staging)
         run: |

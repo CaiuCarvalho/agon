@@ -121,7 +121,7 @@ Todo trabalho não-trivial (feature nova, bugfix complexo, refatoração) segue 
 | Ambiente | URL | Branch | VPS dir | PM2 process | Porta Next | Supabase | Mercado Pago |
 |---|---|---|---|---|---|---|---|
 | dev local | `http://localhost:3000` | qualquer | — | — | 3000 | staging | sandbox |
-| staging | `https://staging.agonimports.com` | `staging` | `/var/www/agon-staging/app/` | `agon-web-staging` | 30001 | staging | sandbox |
+| staging | `https://staging.agonimports.com` | `staging` | `/var/www/agon/staging/` | `agon-staging` | 30001 | staging | sandbox |
 | produção | `https://agonimports.com` | `main` | `/var/www/agon/app/` | `agon-web` | 30000 | produção | produção |
 
 **Fluxo de promoção:** PR → `staging` → QA em `staging.agonimports.com` → PR `staging` → `main` → deploy de produção. Nunca pushar direto para `main`.
@@ -158,7 +158,7 @@ Todo trabalho não-trivial (feature nova, bugfix complexo, refatoração) segue 
 ### CI/CD (GitHub Actions)
 - **CI** (`.github/workflows/ci.yml`): typecheck + audit SDD + tests on push/PR to `main`. Tests receive `STAGING_*` Supabase credentials, so `skipIf(!hasSupabaseEnv)` integration tests run against the staging project.
 - **Deploy prod** (`.github/workflows/deploy.yml`): on push to `main` — builds `.env.local` from GitHub secrets, SCPs to VPS, SSHs to run `deploy.sh`, health checks `HEALTHCHECK_URL`
-- **Deploy staging** (`.github/workflows/deploy-staging.yml`): on push to `staging` — same flow as prod using `STAGING_*` secrets, targets `/var/www/agon-staging/app/`, runs `deploy-staging.sh`, health checks `STAGING_HEALTHCHECK_URL`
+- **Deploy staging** (`.github/workflows/deploy-staging.yml`): on push to `staging` — same flow as prod using `STAGING_*` secrets, targets `/var/www/agon/staging/`, runs `deploy-staging.sh`, health checks `STAGING_HEALTHCHECK_URL`
 - **deploy.sh / deploy-staging.sh**: `git fetch + reset --hard`, `npm ci`, `npm run build`, `pm2 reload`
 
 ### GitHub Actions Secrets required
@@ -186,6 +186,15 @@ STAGING_SUPABASE_SERVICE_ROLE_KEY
 STAGING_MERCADOPAGO_ACCESS_TOKEN      # TEST-* (Mercado Pago sandbox)
 STAGING_MERCADOPAGO_WEBHOOK_SECRET    # distinct from prod
 STAGING_HEALTHCHECK_URL               # https://staging.agonimports.com/api/health
+
+# Opcionais — habilitam aplicação automática de migrações via CI.
+# Se ausentes, o passo de migração é pulado e as migrações podem ser
+# aplicadas manualmente via supabase/ALL_MIGRATIONS_BUNDLE.sql (Dashboard).
+SUPABASE_ACCESS_TOKEN                 # personal access token (compartilhado)
+SUPABASE_PROJECT_ID                   # ref do projeto prod
+SUPABASE_DB_PASSWORD                  # senha do banco prod
+STAGING_SUPABASE_PROJECT_REF          # ref do projeto staging
+STAGING_SUPABASE_DB_PASSWORD          # senha do banco staging
 ```
 > `NEXT_PUBLIC_APP_URL` is hardcoded as `https://agonimports.com` (prod) and `https://staging.agonimports.com` (staging) in the respective workflows (not secrets). Cloudinary credentials are shared between environments.
 
@@ -197,13 +206,13 @@ The deploy workflow **overwrites** `.env.local` on every run from GitHub secrets
 Staging shares host/user with production but lives in a separate directory and
 PM2 process.
 
-- **App dir:** `/var/www/agon-staging/app/` (git clone, branch `staging`)
-- **Web working dir:** `/var/www/agon-staging/app/apps/web/` (PM2 cwd)
-- **`.env.local`:** `/var/www/agon-staging/app/apps/web/.env.local`
-- **PM2 process:** `agon-web-staging`, fork mode, port **30001**
+- **App dir:** `/var/www/agon/staging/` (git clone, branch `staging`)
+- **Web working dir:** `/var/www/agon/staging/apps/web/` (PM2 cwd)
+- **`.env.local`:** `/var/www/agon/staging/apps/web/.env.local`
+- **PM2 process:** `agon-staging`, fork mode, port **30001**
 - **Nginx:** `staging.agonimports.com` → `443 → localhost:30001`, SSL via
   Let's Encrypt (`/etc/letsencrypt/live/staging.agonimports.com/`)
-- **Start/reload:** `pm2 reload agon-web-staging --update-env`
+- **Start/reload:** `pm2 reload agon-staging --update-env`
 
 ### First-time staging VPS provisioning
 
@@ -216,14 +225,14 @@ Run once on the VPS as `root`:
 certbot --nginx -d staging.agonimports.com
 
 # 3. Clone repo on the staging branch
-mkdir -p /var/www/agon-staging
-cd /var/www/agon-staging
-git clone https://github.com/CaiuCarvalho/agon.git app
-cd app && git checkout staging
+mkdir -p /var/www/agon
+cd /var/www/agon
+git clone https://github.com/CaiuCarvalho/agon.git staging
+cd staging && git checkout staging
 
 # 4. Start the PM2 process (deploy-staging.sh will reuse it afterwards)
-cd /var/www/agon-staging/app/apps/web
-pm2 start npm --name agon-web-staging -- run start -- -p 30001
+cd /var/www/agon/staging/apps/web
+pm2 start npm --name agon-staging -- run start -- -p 30001
 pm2 save
 
 # 5. Reload nginx after adding the staging server blocks from nginx.conf

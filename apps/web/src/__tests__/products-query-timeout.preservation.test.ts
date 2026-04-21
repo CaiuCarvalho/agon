@@ -21,6 +21,7 @@
 import { describe, it, expect, beforeAll } from 'vitest';
 import { fc, test } from '@fast-check/vitest';
 import { getProducts } from '@/modules/products/services/productService';
+import { createClient } from '@/lib/supabase/client';
 import type { ProductFilters } from '@/modules/products/types';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
@@ -28,6 +29,7 @@ const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
 const hasSupabaseEnv = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
 
 describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Existing Functionality', () => {
+  const supabase = hasSupabaseEnv ? createClient() : (null as any);
   /**
    * Property 2.1: Filter Preservation
    * 
@@ -58,7 +60,7 @@ describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Existing Function
     console.log('Testing filters:', JSON.stringify(filters, null, 2));
 
     // Execute query with filters
-    const result = await getProducts(filters);
+    const result = await getProducts(supabase, filters);
 
     console.log(`✓ Query completed successfully`);
     console.log(`✓ Products returned: ${result.products.length}`);
@@ -121,7 +123,7 @@ describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Existing Function
     console.log('Testing pagination:', JSON.stringify(filters, null, 2));
 
     // Execute query with pagination
-    const result = await getProducts(filters);
+    const result = await getProducts(supabase, filters);
 
     console.log(`✓ Query completed successfully`);
     console.log(`✓ Products returned: ${result.products.length}`);
@@ -161,7 +163,7 @@ describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Existing Function
     console.log('Testing sort:', sortBy);
 
     // Execute query with sorting
-    const result = await getProducts({ sortBy, limit: 10 });
+    const result = await getProducts(supabase, { sortBy, limit: 10 });
 
     console.log(`✓ Query completed successfully`);
     console.log(`✓ Products returned: ${result.products.length}`);
@@ -227,7 +229,7 @@ describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Existing Function
     console.log('\n=== Property 2.4: Data Transformation Preservation ===');
 
     // Execute query
-    const result = await getProducts({ limit: 5 });
+    const result = await getProducts(supabase, { limit: 5 });
 
     console.log(`✓ Query completed successfully`);
     console.log(`✓ Products returned: ${result.products.length}`);
@@ -310,7 +312,7 @@ describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Existing Function
     console.log('Testing search term:', searchTerm);
 
     // Execute query with search
-    const result = await getProducts({ search: searchTerm, limit: 20 });
+    const result = await getProducts(supabase, { search: searchTerm, limit: 20 });
 
     console.log(`✓ Query completed successfully`);
     console.log(`✓ Products returned: ${result.products.length}`);
@@ -370,7 +372,7 @@ describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Existing Function
     for (const scenario of scenarios) {
       console.log(`\n  Testing scenario: ${scenario.name}`);
       
-      const result = await getProducts(scenario.filters);
+      const result = await getProducts(supabase, scenario.filters);
       
       console.log(`  ✓ Query completed successfully`);
       console.log(`  ✓ Products returned: ${result.products.length}`);
@@ -414,7 +416,7 @@ describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Existing Function
     console.log('Testing combined filters:', JSON.stringify(filters, null, 2));
 
     // Execute query with combined filters
-    const result = await getProducts(filters);
+    const result = await getProducts(supabase, filters);
 
     console.log(`✓ Query completed successfully`);
     console.log(`✓ Products returned: ${result.products.length}`);
