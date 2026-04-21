@@ -30,6 +30,19 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Schema drift guard: em prod a tabela profiles foi criada manualmente no
+-- Dashboard e pode estar faltando colunas. ADD COLUMN IF NOT EXISTS garante
+-- que todas as colunas esperadas existam antes do INSERT/UPDATE abaixo.
+-- Não impõe NOT NULL pra não quebrar linhas pré-existentes.
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS email TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS role TEXT DEFAULT 'customer';
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS avatar_url TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS tax_id TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone TEXT;
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
 CREATE INDEX IF NOT EXISTS idx_profiles_email ON public.profiles (email);
 CREATE INDEX IF NOT EXISTS idx_profiles_role ON public.profiles (role);
 
