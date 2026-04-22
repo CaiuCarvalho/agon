@@ -68,10 +68,12 @@ ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 -- Política básica. As migrations posteriores (20260411011908) substituem
 -- por versões otimizadas via DROP POLICY IF EXISTS + CREATE.
 DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile"
   ON public.profiles FOR SELECT
   USING (id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile"
   ON public.profiles FOR UPDATE
@@ -106,6 +108,7 @@ BEGIN
 END;
 $$;
 
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW
@@ -142,6 +145,7 @@ CREATE TABLE IF NOT EXISTS public.categories (
 
 ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "categories_select_public" ON public.categories;
 DROP POLICY IF EXISTS "categories_select_public" ON public.categories;
 CREATE POLICY "categories_select_public"
   ON public.categories FOR SELECT
@@ -210,21 +214,25 @@ ALTER TABLE public.addresses ENABLE ROW LEVEL SECURITY;
 
 -- Políticas básicas; migration 20260411011952 refina.
 DROP POLICY IF EXISTS "Users can read own addresses" ON public.addresses;
+DROP POLICY IF EXISTS "Users can read own addresses" ON public.addresses;
 CREATE POLICY "Users can read own addresses"
   ON public.addresses FOR SELECT
   USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can create own addresses" ON public.addresses;
 DROP POLICY IF EXISTS "Users can create own addresses" ON public.addresses;
 CREATE POLICY "Users can create own addresses"
   ON public.addresses FOR INSERT
   WITH CHECK (user_id = auth.uid());
 
 DROP POLICY IF EXISTS "Users can update own addresses" ON public.addresses;
+DROP POLICY IF EXISTS "Users can update own addresses" ON public.addresses;
 CREATE POLICY "Users can update own addresses"
   ON public.addresses FOR UPDATE
   USING (user_id = auth.uid())
   WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can delete own addresses" ON public.addresses;
 DROP POLICY IF EXISTS "Users can delete own addresses" ON public.addresses;
 CREATE POLICY "Users can delete own addresses"
   ON public.addresses FOR DELETE
@@ -258,9 +266,9 @@ CREATE TABLE IF NOT EXISTS cart_items (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_cart_items_user_id ON cart_items(user_id);
-CREATE INDEX idx_cart_items_product_id ON cart_items(product_id);
-CREATE INDEX idx_cart_items_updated_at ON cart_items(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_cart_items_user_id ON cart_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_product_id ON cart_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_cart_items_updated_at ON cart_items(updated_at DESC);
 
 -- Create function to update updated_at timestamp
 CREATE OR REPLACE FUNCTION update_updated_at_column()
@@ -272,6 +280,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger to auto-update updated_at timestamp
+DROP TRIGGER IF EXISTS update_cart_items_updated_at ON cart_items;
 CREATE TRIGGER update_cart_items_updated_at
   BEFORE UPDATE ON cart_items
   FOR EACH ROW
@@ -281,21 +290,25 @@ CREATE TRIGGER update_cart_items_updated_at
 ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Users can only read their own cart items
+DROP POLICY IF EXISTS "cart_items_select_own" ON cart_items;
 CREATE POLICY "cart_items_select_own"
   ON cart_items FOR SELECT
   USING (auth.uid() = user_id);
 
 -- RLS Policy: Users can only insert their own cart items
+DROP POLICY IF EXISTS "cart_items_insert_own" ON cart_items;
 CREATE POLICY "cart_items_insert_own"
   ON cart_items FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policy: Users can only update their own cart items
+DROP POLICY IF EXISTS "cart_items_update_own" ON cart_items;
 CREATE POLICY "cart_items_update_own"
   ON cart_items FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- RLS Policy: Users can only delete their own cart items
+DROP POLICY IF EXISTS "cart_items_delete_own" ON cart_items;
 CREATE POLICY "cart_items_delete_own"
   ON cart_items FOR DELETE
   USING (auth.uid() = user_id);
@@ -325,24 +338,27 @@ CREATE TABLE IF NOT EXISTS wishlist_items (
 );
 
 -- Create indexes for performance
-CREATE INDEX idx_wishlist_items_user_id ON wishlist_items(user_id);
-CREATE INDEX idx_wishlist_items_product_id ON wishlist_items(product_id);
-CREATE INDEX idx_wishlist_items_created_at ON wishlist_items(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_wishlist_items_user_id ON wishlist_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_wishlist_items_product_id ON wishlist_items(product_id);
+CREATE INDEX IF NOT EXISTS idx_wishlist_items_created_at ON wishlist_items(created_at DESC);
 
 -- Enable Row Level Security
 ALTER TABLE wishlist_items ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policy: Users can only read their own wishlist items
+DROP POLICY IF EXISTS "wishlist_items_select_own" ON wishlist_items;
 CREATE POLICY "wishlist_items_select_own"
   ON wishlist_items FOR SELECT
   USING (auth.uid() = user_id);
 
 -- RLS Policy: Users can only insert their own wishlist items
+DROP POLICY IF EXISTS "wishlist_items_insert_own" ON wishlist_items;
 CREATE POLICY "wishlist_items_insert_own"
   ON wishlist_items FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- RLS Policy: Users can only delete their own wishlist items
+DROP POLICY IF EXISTS "wishlist_items_delete_own" ON wishlist_items;
 CREATE POLICY "wishlist_items_delete_own"
   ON wishlist_items FOR DELETE
   USING (auth.uid() = user_id);
@@ -370,6 +386,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to enforce limit before insert
+DROP TRIGGER IF EXISTS enforce_wishlist_limit ON wishlist_items;
 CREATE TRIGGER enforce_wishlist_limit
   BEFORE INSERT ON wishlist_items
   FOR EACH ROW
@@ -617,21 +634,25 @@ COMMENT ON FUNCTION add_to_cart_atomic(UUID, UUID, INTEGER, TEXT) IS 'Atomically
 -- Requirements: 33.1, 33.2, 33.3, 33.4
 
 -- Add CHECK constraint: price_snapshot must be positive
+ALTER TABLE cart_items DROP CONSTRAINT IF EXISTS check_price_snapshot_positive;
 ALTER TABLE cart_items
 ADD CONSTRAINT check_price_snapshot_positive
 CHECK (price_snapshot > 0);
 
 -- Add CHECK constraint: product_name_snapshot must not be empty
+ALTER TABLE cart_items DROP CONSTRAINT IF EXISTS check_product_name_not_empty;
 ALTER TABLE cart_items
 ADD CONSTRAINT check_product_name_not_empty
 CHECK (product_name_snapshot != '' AND char_length(product_name_snapshot) > 0);
 
 -- Add CHECK constraint: prevent overflow (quantity * price_snapshot <= 999999)
+ALTER TABLE cart_items DROP CONSTRAINT IF EXISTS check_total_price_overflow;
 ALTER TABLE cart_items
 ADD CONSTRAINT check_total_price_overflow
 CHECK (quantity * price_snapshot <= 999999);
 
 -- Add CHECK constraint: created_at must be before or equal to updated_at
+ALTER TABLE cart_items DROP CONSTRAINT IF EXISTS check_timestamps_order;
 ALTER TABLE cart_items
 ADD CONSTRAINT check_timestamps_order
 CHECK (created_at <= updated_at);
@@ -652,7 +673,7 @@ COMMENT ON CONSTRAINT check_timestamps_order ON cart_items IS 'Ensures created_a
 -- Description: Creates a table to track user operations for rate limiting (60 requests per minute)
 
 -- Create rate_limit_log table
-CREATE TABLE rate_limit_log (
+CREATE TABLE IF NOT EXISTS rate_limit_log (
   user_id UUID NOT NULL,
   operation TEXT NOT NULL,
   timestamp TIMESTAMPTZ DEFAULT NOW() NOT NULL,
@@ -661,7 +682,7 @@ CREATE TABLE rate_limit_log (
 
 -- Create index for efficient rate limit queries
 -- This index allows fast lookups of recent requests by user
-CREATE INDEX idx_rate_limit_log_user_time 
+CREATE INDEX IF NOT EXISTS idx_rate_limit_log_user_time 
   ON rate_limit_log(user_id, timestamp DESC);
 
 -- Add comment to table for documentation
@@ -719,6 +740,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_orders_updated_at ON orders;
 CREATE TRIGGER trigger_update_orders_updated_at
   BEFORE UPDATE ON orders
   FOR EACH ROW
@@ -779,16 +801,19 @@ COMMENT ON COLUMN order_items.size IS 'Product size/variant (optional, e.g., P, 
 ALTER TABLE orders ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only read their own orders
+DROP POLICY IF EXISTS "orders_select_own" ON orders;
 CREATE POLICY "orders_select_own"
   ON orders FOR SELECT
   USING (auth.uid() = user_id);
 
 -- Policy: Users can only insert their own orders
+DROP POLICY IF EXISTS "orders_insert_own" ON orders;
 CREATE POLICY "orders_insert_own"
   ON orders FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Policy: Users can update their own orders, admins can update any order
+DROP POLICY IF EXISTS "orders_update_own_or_admin" ON orders;
 CREATE POLICY "orders_update_own_or_admin"
   ON orders FOR UPDATE
   USING (
@@ -801,6 +826,7 @@ CREATE POLICY "orders_update_own_or_admin"
   );
 
 -- Policy: Only admins can delete orders
+DROP POLICY IF EXISTS "orders_delete_admin" ON orders;
 CREATE POLICY "orders_delete_admin"
   ON orders FOR DELETE
   USING (
@@ -829,6 +855,7 @@ COMMENT ON POLICY "orders_delete_admin" ON orders IS 'Only admins can delete ord
 ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 
 -- Policy: Users can only read order items for their own orders
+DROP POLICY IF EXISTS "order_items_select_own" ON order_items;
 CREATE POLICY "order_items_select_own"
   ON order_items FOR SELECT
   USING (
@@ -840,6 +867,7 @@ CREATE POLICY "order_items_select_own"
   );
 
 -- Policy: Users can only insert order items for their own orders
+DROP POLICY IF EXISTS "order_items_insert_own" ON order_items;
 CREATE POLICY "order_items_insert_own"
   ON order_items FOR INSERT
   WITH CHECK (
@@ -851,6 +879,7 @@ CREATE POLICY "order_items_insert_own"
   );
 
 -- Policy: Only admins can update order items
+DROP POLICY IF EXISTS "order_items_update_admin" ON order_items;
 CREATE POLICY "order_items_update_admin"
   ON order_items FOR UPDATE
   USING (
@@ -862,6 +891,7 @@ CREATE POLICY "order_items_update_admin"
   );
 
 -- Policy: Only admins can delete order items
+DROP POLICY IF EXISTS "order_items_delete_admin" ON order_items;
 CREATE POLICY "order_items_delete_admin"
   ON order_items FOR DELETE
   USING (
@@ -1063,15 +1093,16 @@ CREATE TABLE IF NOT EXISTS payments (
 -- 2. Create indexes for performance
 -- ============================================
 
-CREATE INDEX idx_payments_order_id ON payments(order_id);
-CREATE INDEX idx_payments_mercadopago_payment_id ON payments(mercadopago_payment_id) WHERE mercadopago_payment_id IS NOT NULL;
-CREATE INDEX idx_payments_mercadopago_preference_id ON payments(mercadopago_preference_id);
-CREATE INDEX idx_payments_status ON payments(status);
+CREATE INDEX IF NOT EXISTS idx_payments_order_id ON payments(order_id);
+CREATE INDEX IF NOT EXISTS idx_payments_mercadopago_payment_id ON payments(mercadopago_payment_id) WHERE mercadopago_payment_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS idx_payments_mercadopago_preference_id ON payments(mercadopago_preference_id);
+CREATE INDEX IF NOT EXISTS idx_payments_status ON payments(status);
 
 -- ============================================
 -- 3. Create trigger for updated_at
 -- ============================================
 
+DROP TRIGGER IF EXISTS update_payments_updated_at ON payments;
 CREATE TRIGGER update_payments_updated_at
   BEFORE UPDATE ON payments
   FOR EACH ROW
@@ -1098,6 +1129,7 @@ ALTER TABLE payments ENABLE ROW LEVEL SECURITY;
 -- ============================================
 
 -- Policy: Users can only read payments for their own orders
+DROP POLICY IF EXISTS "payments_select_own" ON payments;
 CREATE POLICY "payments_select_own"
   ON payments FOR SELECT
   USING (
@@ -1109,6 +1141,7 @@ CREATE POLICY "payments_select_own"
   );
 
 -- Policy: Users can only insert payments for their own orders
+DROP POLICY IF EXISTS "payments_insert_own" ON payments;
 CREATE POLICY "payments_insert_own"
   ON payments FOR INSERT
   WITH CHECK (
@@ -1120,6 +1153,7 @@ CREATE POLICY "payments_insert_own"
   );
 
 -- Policy: Only system (via RPC) or admin can update payments
+DROP POLICY IF EXISTS "payments_update_system_or_admin" ON payments;
 CREATE POLICY "payments_update_system_or_admin"
   ON payments FOR UPDATE
   USING (
@@ -1138,6 +1172,7 @@ CREATE POLICY "payments_update_system_or_admin"
   );
 
 -- Policy: Only admins can delete payments
+DROP POLICY IF EXISTS "payments_delete_admin" ON payments;
 CREATE POLICY "payments_delete_admin"
   ON payments FOR DELETE
   USING (
@@ -1156,6 +1191,7 @@ CREATE POLICY "payments_delete_admin"
 ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_method_check;
 
 -- Add new constraint with Mercado Pago methods
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_payment_method_check;
 ALTER TABLE orders ADD CONSTRAINT orders_payment_method_check
   CHECK (payment_method IN (
     'cash_on_delivery',
@@ -1439,6 +1475,7 @@ ADD COLUMN IF NOT EXISTS shipped_at TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS idx_orders_shipping_status ON orders(shipping_status);
 
 -- Add constraint: tracking_code and carrier required when shipped
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_shipping_fields_check;
 ALTER TABLE orders 
 ADD CONSTRAINT orders_shipping_fields_check 
 CHECK (
@@ -1503,6 +1540,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trigger_update_order_status_on_shipping ON orders;
 CREATE TRIGGER trigger_update_order_status_on_shipping
   BEFORE UPDATE OF shipping_status ON orders
   FOR EACH ROW
@@ -1553,6 +1591,7 @@ COMMENT ON FUNCTION assert_single_payment_per_order IS 'Defensive check: validat
 -- ============================================
 
 -- Admin can SELECT all products (including soft-deleted)
+DROP POLICY IF EXISTS "admin_select_products" ON products;
 CREATE POLICY "admin_select_products"
 ON products
 FOR SELECT
@@ -1566,6 +1605,7 @@ USING (
 );
 
 -- Admin can INSERT products
+DROP POLICY IF EXISTS "admin_insert_products" ON products;
 CREATE POLICY "admin_insert_products"
 ON products
 FOR INSERT
@@ -1579,6 +1619,7 @@ WITH CHECK (
 );
 
 -- Admin can UPDATE products
+DROP POLICY IF EXISTS "admin_update_products" ON products;
 CREATE POLICY "admin_update_products"
 ON products
 FOR UPDATE
@@ -1599,6 +1640,7 @@ WITH CHECK (
 );
 
 -- Admin can DELETE products (soft delete via updated_at)
+DROP POLICY IF EXISTS "admin_delete_products" ON products;
 CREATE POLICY "admin_delete_products"
 ON products
 FOR DELETE
@@ -1616,6 +1658,7 @@ USING (
 -- ============================================
 
 -- Admin can SELECT all orders
+DROP POLICY IF EXISTS "admin_select_orders" ON orders;
 CREATE POLICY "admin_select_orders"
 ON orders
 FOR SELECT
@@ -1629,6 +1672,7 @@ USING (
 );
 
 -- Admin can UPDATE orders (for shipping info)
+DROP POLICY IF EXISTS "admin_update_orders" ON orders;
 CREATE POLICY "admin_update_orders"
 ON orders
 FOR UPDATE
@@ -1653,6 +1697,7 @@ WITH CHECK (
 -- ============================================
 
 -- Admin can SELECT all order items
+DROP POLICY IF EXISTS "admin_select_order_items" ON order_items;
 CREATE POLICY "admin_select_order_items"
 ON order_items
 FOR SELECT
@@ -1670,6 +1715,7 @@ USING (
 -- ============================================
 
 -- Admin can SELECT all payments
+DROP POLICY IF EXISTS "admin_select_payments" ON payments;
 CREATE POLICY "admin_select_payments"
 ON payments
 FOR SELECT
@@ -1835,6 +1881,7 @@ DROP POLICY IF EXISTS "products_select_public" ON products;
 -- Allow public read access to non-deleted products
 -- This policy allows SELECT for all users (authenticated and anonymous)
 -- Only non-deleted products (deleted_at IS NULL) are accessible
+DROP POLICY IF EXISTS "products_select_public" ON products;
 CREATE POLICY "products_select_public"
   ON products FOR SELECT
   TO public
@@ -2766,11 +2813,13 @@ DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 DROP POLICY IF EXISTS "Update" ON public.profiles;
 
 -- Create optimized consolidated policies
+DROP POLICY IF EXISTS "profiles_select_own" ON public.profiles;
 CREATE POLICY "profiles_select_own"
   ON public.profiles
   FOR SELECT
   USING (id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "profiles_update_own" ON public.profiles;
 CREATE POLICY "profiles_update_own"
   ON public.profiles
   FOR UPDATE
@@ -2791,22 +2840,26 @@ DROP POLICY IF EXISTS "Users can create own addresses" ON public.addresses;
 DROP POLICY IF EXISTS "Users can update own addresses" ON public.addresses;
 DROP POLICY IF EXISTS "Users can delete own addresses" ON public.addresses;
 
+DROP POLICY IF EXISTS "addresses_select_own" ON public.addresses;
 CREATE POLICY "addresses_select_own"
   ON public.addresses
   FOR SELECT
   USING (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "addresses_insert_own" ON public.addresses;
 CREATE POLICY "addresses_insert_own"
   ON public.addresses
   FOR INSERT
   WITH CHECK (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "addresses_update_own" ON public.addresses;
 CREATE POLICY "addresses_update_own"
   ON public.addresses
   FOR UPDATE
   USING (user_id = (SELECT auth.uid()))
   WITH CHECK (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "addresses_delete_own" ON public.addresses;
 CREATE POLICY "addresses_delete_own"
   ON public.addresses
   FOR DELETE
@@ -2827,22 +2880,26 @@ DROP POLICY IF EXISTS "cart_items_insert_own" ON public.cart_items;
 DROP POLICY IF EXISTS "cart_items_update_own" ON public.cart_items;
 DROP POLICY IF EXISTS "cart_items_delete_own" ON public.cart_items;
 
+DROP POLICY IF EXISTS "cart_items_select_own" ON public.cart_items;
 CREATE POLICY "cart_items_select_own"
   ON public.cart_items
   FOR SELECT
   USING (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "cart_items_insert_own" ON public.cart_items;
 CREATE POLICY "cart_items_insert_own"
   ON public.cart_items
   FOR INSERT
   WITH CHECK (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "cart_items_update_own" ON public.cart_items;
 CREATE POLICY "cart_items_update_own"
   ON public.cart_items
   FOR UPDATE
   USING (user_id = (SELECT auth.uid()))
   WITH CHECK (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "cart_items_delete_own" ON public.cart_items;
 CREATE POLICY "cart_items_delete_own"
   ON public.cart_items
   FOR DELETE
@@ -2853,16 +2910,19 @@ DROP POLICY IF EXISTS "wishlist_items_select_own" ON public.wishlist_items;
 DROP POLICY IF EXISTS "wishlist_items_insert_own" ON public.wishlist_items;
 DROP POLICY IF EXISTS "wishlist_items_delete_own" ON public.wishlist_items;
 
+DROP POLICY IF EXISTS "wishlist_items_select_own" ON public.wishlist_items;
 CREATE POLICY "wishlist_items_select_own"
   ON public.wishlist_items
   FOR SELECT
   USING (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "wishlist_items_insert_own" ON public.wishlist_items;
 CREATE POLICY "wishlist_items_insert_own"
   ON public.wishlist_items
   FOR INSERT
   WITH CHECK (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "wishlist_items_delete_own" ON public.wishlist_items;
 CREATE POLICY "wishlist_items_delete_own"
   ON public.wishlist_items
   FOR DELETE
@@ -2883,16 +2943,19 @@ DROP POLICY IF EXISTS "orders_insert_own" ON public.orders;
 DROP POLICY IF EXISTS "orders_update_own_or_admin" ON public.orders;
 DROP POLICY IF EXISTS "orders_delete_admin" ON public.orders;
 
+DROP POLICY IF EXISTS "orders_select_own" ON public.orders;
 CREATE POLICY "orders_select_own"
   ON public.orders
   FOR SELECT
   USING (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "orders_insert_own" ON public.orders;
 CREATE POLICY "orders_insert_own"
   ON public.orders
   FOR INSERT
   WITH CHECK (user_id = (SELECT auth.uid()));
 
+DROP POLICY IF EXISTS "orders_update_own_or_admin" ON public.orders;
 CREATE POLICY "orders_update_own_or_admin"
   ON public.orders
   FOR UPDATE
@@ -2905,6 +2968,7 @@ CREATE POLICY "orders_update_own_or_admin"
     (SELECT (raw_user_meta_data->>'role')::text FROM auth.users WHERE id = (SELECT auth.uid())) = 'admin'
   );
 
+DROP POLICY IF EXISTS "orders_delete_admin" ON public.orders;
 CREATE POLICY "orders_delete_admin"
   ON public.orders
   FOR DELETE
@@ -2918,6 +2982,7 @@ DROP POLICY IF EXISTS "order_items_insert_own" ON public.order_items;
 DROP POLICY IF EXISTS "order_items_update_admin" ON public.order_items;
 DROP POLICY IF EXISTS "order_items_delete_admin" ON public.order_items;
 
+DROP POLICY IF EXISTS "order_items_select_own" ON public.order_items;
 CREATE POLICY "order_items_select_own"
   ON public.order_items
   FOR SELECT
@@ -2929,6 +2994,7 @@ CREATE POLICY "order_items_select_own"
     )
   );
 
+DROP POLICY IF EXISTS "order_items_insert_own" ON public.order_items;
 CREATE POLICY "order_items_insert_own"
   ON public.order_items
   FOR INSERT
@@ -2940,6 +3006,7 @@ CREATE POLICY "order_items_insert_own"
     )
   );
 
+DROP POLICY IF EXISTS "order_items_update_admin" ON public.order_items;
 CREATE POLICY "order_items_update_admin"
   ON public.order_items
   FOR UPDATE
@@ -2950,6 +3017,7 @@ CREATE POLICY "order_items_update_admin"
     (SELECT (raw_user_meta_data->>'role')::text FROM auth.users WHERE id = (SELECT auth.uid())) = 'admin'
   );
 
+DROP POLICY IF EXISTS "order_items_delete_admin" ON public.order_items;
 CREATE POLICY "order_items_delete_admin"
   ON public.order_items
   FOR DELETE
@@ -2971,6 +3039,7 @@ DROP POLICY IF EXISTS "payments_insert_own" ON public.payments;
 DROP POLICY IF EXISTS "payments_update_system_or_admin" ON public.payments;
 DROP POLICY IF EXISTS "payments_delete_admin" ON public.payments;
 
+DROP POLICY IF EXISTS "payments_select_own" ON public.payments;
 CREATE POLICY "payments_select_own"
   ON public.payments
   FOR SELECT
@@ -2982,6 +3051,7 @@ CREATE POLICY "payments_select_own"
     )
   );
 
+DROP POLICY IF EXISTS "payments_insert_own" ON public.payments;
 CREATE POLICY "payments_insert_own"
   ON public.payments
   FOR INSERT
@@ -2993,6 +3063,7 @@ CREATE POLICY "payments_insert_own"
     )
   );
 
+DROP POLICY IF EXISTS "payments_update_system_or_admin" ON public.payments;
 CREATE POLICY "payments_update_system_or_admin"
   ON public.payments
   FOR UPDATE
@@ -3003,6 +3074,7 @@ CREATE POLICY "payments_update_system_or_admin"
     (SELECT (raw_user_meta_data->>'role')::text FROM auth.users WHERE id = (SELECT auth.uid())) = 'admin'
   );
 
+DROP POLICY IF EXISTS "payments_delete_admin" ON public.payments;
 CREATE POLICY "payments_delete_admin"
   ON public.payments
   FOR DELETE
@@ -3023,6 +3095,7 @@ CREATE POLICY "payments_delete_admin"
 DROP POLICY IF EXISTS "orders_update_own_or_admin" ON public.orders;
 DROP POLICY IF EXISTS "orders_delete_admin" ON public.orders;
 
+DROP POLICY IF EXISTS "orders_update_own_or_admin" ON public.orders;
 CREATE POLICY "orders_update_own_or_admin"
   ON public.orders
   FOR UPDATE
@@ -3047,6 +3120,7 @@ CREATE POLICY "orders_update_own_or_admin"
     (SELECT (raw_user_meta_data->>'role')::text FROM auth.users WHERE id = (SELECT auth.uid())) = 'admin'
   );
 
+DROP POLICY IF EXISTS "orders_delete_admin" ON public.orders;
 CREATE POLICY "orders_delete_admin"
   ON public.orders
   FOR DELETE
@@ -3064,6 +3138,7 @@ CREATE POLICY "orders_delete_admin"
 DROP POLICY IF EXISTS "order_items_update_admin" ON public.order_items;
 DROP POLICY IF EXISTS "order_items_delete_admin" ON public.order_items;
 
+DROP POLICY IF EXISTS "order_items_update_admin" ON public.order_items;
 CREATE POLICY "order_items_update_admin"
   ON public.order_items
   FOR UPDATE
@@ -3086,6 +3161,7 @@ CREATE POLICY "order_items_update_admin"
     (SELECT (raw_user_meta_data->>'role')::text FROM auth.users WHERE id = (SELECT auth.uid())) = 'admin'
   );
 
+DROP POLICY IF EXISTS "order_items_delete_admin" ON public.order_items;
 CREATE POLICY "order_items_delete_admin"
   ON public.order_items
   FOR DELETE
@@ -3103,6 +3179,7 @@ CREATE POLICY "order_items_delete_admin"
 DROP POLICY IF EXISTS "payments_update_system_or_admin" ON public.payments;
 DROP POLICY IF EXISTS "payments_delete_admin" ON public.payments;
 
+DROP POLICY IF EXISTS "payments_update_system_or_admin" ON public.payments;
 CREATE POLICY "payments_update_system_or_admin"
   ON public.payments
   FOR UPDATE
@@ -3125,6 +3202,7 @@ CREATE POLICY "payments_update_system_or_admin"
     (SELECT (raw_user_meta_data->>'role')::text FROM auth.users WHERE id = (SELECT auth.uid())) = 'admin'
   );
 
+DROP POLICY IF EXISTS "payments_delete_admin" ON public.payments;
 CREATE POLICY "payments_delete_admin"
   ON public.payments
   FOR DELETE
@@ -3165,6 +3243,7 @@ DROP POLICY IF EXISTS "orders_select_own_or_admin" ON public.orders;
 -- Create new SELECT policy that allows:
 -- 1. Users to see their own orders
 -- 2. Admins to see ALL orders
+DROP POLICY IF EXISTS "orders_select_own_or_admin" ON public.orders;
 CREATE POLICY "orders_select_own_or_admin"
   ON public.orders
   FOR SELECT
@@ -3207,6 +3286,7 @@ CREATE POLICY "orders_select_own_or_admin"
 -- Order Items - SELECT policy for admin
 DROP POLICY IF EXISTS "order_items_select_own_or_admin" ON public.order_items;
 
+DROP POLICY IF EXISTS "order_items_select_own_or_admin" ON public.order_items;
 CREATE POLICY "order_items_select_own_or_admin"
   ON public.order_items
   FOR SELECT
@@ -3232,6 +3312,7 @@ CREATE POLICY "order_items_select_own_or_admin"
 -- Payments - SELECT policy for admin
 DROP POLICY IF EXISTS "payments_select_own_or_admin" ON public.payments;
 
+DROP POLICY IF EXISTS "payments_select_own_or_admin" ON public.payments;
 CREATE POLICY "payments_select_own_or_admin"
   ON public.payments
   FOR SELECT
