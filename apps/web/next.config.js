@@ -1,3 +1,6 @@
+// @ts-check
+const { withSentryConfig } = require('@sentry/nextjs')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     images: {
@@ -37,4 +40,20 @@ const nextConfig = {
      */
 };
 
-module.exports = nextConfig;
+// Wrap with Sentry only when DSN is configured (skips overhead in local dev).
+module.exports = process.env.SENTRY_DSN || process.env.NEXT_PUBLIC_SENTRY_DSN
+  ? withSentryConfig(nextConfig, {
+      org: process.env.SENTRY_ORG,
+      project: process.env.SENTRY_PROJECT ?? 'agon-web',
+      // Upload source maps silently; show errors only in CI.
+      silent: !process.env.CI,
+      // Include server-side files for better stack traces.
+      widenClientFileUpload: true,
+      // Proxy Sentry requests through the app to avoid ad-blockers.
+      tunnelRoute: '/monitoring-tunnel',
+      // Hide source maps from browser devtools in production.
+      hideSourceMaps: true,
+      disableLogger: true,
+      automaticVercelMonitors: false,
+    })
+  : nextConfig;

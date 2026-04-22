@@ -1,6 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { isAdminRole } from '@/lib/auth/roles'
+import { logger } from '@/lib/logger'
 
 function redirectToLogin(request: NextRequest) {
   const redirectUrl = request.nextUrl.clone()
@@ -15,10 +16,15 @@ function redirectToLogin(request: NextRequest) {
 export async function middleware(request: NextRequest) {
   const startTime = Date.now();
   const path = request.nextUrl.pathname;
+  const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
 
   try {
+    // Inject request ID so downstream route handlers can read it.
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-request-id', requestId)
+
     let supabaseResponse = NextResponse.next({
-      request,
+      request: { headers: requestHeaders },
     })
 
     const supabase = createServerClient(
@@ -30,11 +36,11 @@ export async function middleware(request: NextRequest) {
             return request.cookies.getAll()
           },
           setAll(cookiesToSet) {
-            cookiesToSet.forEach(({ name, value, options }) =>
+            cookiesToSet.forEach(({ name, value }) =>
               request.cookies.set(name, value)
             )
             supabaseResponse = NextResponse.next({
-              request,
+              request: { headers: requestHeaders },
             })
             cookiesToSet.forEach(({ name, value, options }) =>
               supabaseResponse.cookies.set(name, value, options)
@@ -81,13 +87,14 @@ export async function middleware(request: NextRequest) {
         }
       }
 
+      supabaseResponse.headers.set('x-request-id', requestId)
       return supabaseResponse
     } finally {
       if (timeoutId) clearTimeout(timeoutId)
     }
   } catch (error) {
     const elapsed = Date.now() - startTime;
-    console.error(`[MW] ${path} - ERROR after ${elapsed}ms:`, error);
+    logger.error(`[MW] ${path} - ERROR after ${elapsed}ms`, { requestId, path, elapsed, error: error instanceof Error ? error.message : String(error) });
 
     const isProtectedPath = path.startsWith('/admin') || path.startsWith('/perfil')
 
