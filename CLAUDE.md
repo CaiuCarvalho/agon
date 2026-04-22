@@ -179,6 +179,10 @@ VPS_PORT          # SSH port
 VPS_SSH_KEY       # private key of ~/.ssh/github_actions on VPS
 HEALTHCHECK_URL   # https://agonimports.com/api/health
 
+# Admin whitelist (validated server-side in validateAdmin + client-side gate)
+ADMIN_EMAIL_PRIMARY                   # e.g. caiu.lfc@gmail.com
+ADMIN_EMAIL_BACKUP                    # e.g. backup-admin@agonimports.com
+
 # Staging (mirrors the prod set, prefixed with STAGING_)
 STAGING_NEXT_PUBLIC_SUPABASE_URL
 STAGING_NEXT_PUBLIC_SUPABASE_ANON_KEY
@@ -186,6 +190,8 @@ STAGING_SUPABASE_SERVICE_ROLE_KEY
 STAGING_MERCADOPAGO_ACCESS_TOKEN      # TEST-* (Mercado Pago sandbox)
 STAGING_MERCADOPAGO_WEBHOOK_SECRET    # distinct from prod
 STAGING_HEALTHCHECK_URL               # https://staging.agonimports.com/api/health
+STAGING_ADMIN_EMAIL_PRIMARY           # pode coincidir com ADMIN_EMAIL_PRIMARY
+STAGING_ADMIN_EMAIL_BACKUP            # pode coincidir com ADMIN_EMAIL_BACKUP
 
 # Opcionais — habilitam aplicação automática de migrações via CI.
 # Se ausentes, o passo de migração é pulado e as migrações podem ser
