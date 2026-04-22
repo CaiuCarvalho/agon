@@ -56,7 +56,7 @@ describe.skipIf(!hasSupabaseEnv)('Bug Condition Exploration: Products Query Time
     let products: any[] = [];
 
     try {
-      const result = await getProducts({ limit: 4, sortBy: 'latest' });
+      const result = await getProducts(supabase, { limit: 4, sortBy: 'latest' });
       queryTime = Date.now() - startTime;
       products = result.products;
       
@@ -111,7 +111,7 @@ describe.skipIf(!hasSupabaseEnv)('Bug Condition Exploration: Products Query Time
     let products: any[] = [];
 
     try {
-      const result = await getProducts({ search: 'brasil' });
+      const result = await getProducts(supabase, { search: 'brasil' });
       queryTime = Date.now() - startTime;
       products = result.products;
       
@@ -285,7 +285,7 @@ describe.skipIf(!hasSupabaseEnv)('Bug Condition Exploration: Products Query Time
       let error: string | undefined;
 
       try {
-        await getProducts(scenario.filters);
+        await getProducts(supabase, scenario.filters);
         success = true;
       } catch (err: any) {
         error = err.message;

@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 
 async function getProducts() {
   const supabase = await createClient();
+  const startTime = Date.now();
 
   const { data, error } = await supabase
     .from('products')
@@ -17,7 +18,15 @@ async function getProducts() {
     .order('name', { ascending: true });
 
   if (error) {
-    console.error('Failed to fetch products:', error);
+    console.error('[products] fetch failed', {
+      page: 'list',
+      supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+      nodeEnv: process.env.NODE_ENV,
+      durationMs: Date.now() - startTime,
+      code: error.code,
+      message: error.message,
+      hint: error.hint,
+    });
     return [];
   }
 

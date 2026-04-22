@@ -1,9 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-echo "Iniciando deploy do Agon (staging)..."
+echo "Iniciando deploy do Agon [STAGING]..."
 
-cd /var/www/agon-staging/app
+cd /var/www/agon/staging
 
 echo "Baixando atualizacoes..."
 git fetch origin staging
@@ -19,8 +19,8 @@ echo "Buildando projeto..."
 npm run build
 
 echo "Recarregando aplicacao..."
-pm2 reload agon-web-staging --update-env || pm2 start npm --name agon-web-staging --cwd apps/web -- run start -- -p 30001
+pm2 reload agon-staging --update-env || pm2 start npm --name agon-staging -- run start --prefix apps/web -- --port 30001
 pm2 save
 
-echo "Deploy de staging concluido."
+echo "Deploy staging concluido."
 pm2 status
