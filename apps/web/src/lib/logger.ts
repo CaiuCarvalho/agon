@@ -14,7 +14,11 @@ function log(level: LogLevel, message: string, context?: LogContext): void {
   // Human-readable in development.
   if (process.env.NODE_ENV === 'production') {
     const fn = level === 'error' || level === 'warn' ? console.error : console.log
-    fn(JSON.stringify(entry))
+    try {
+      fn(JSON.stringify(entry))
+    } catch {
+      fn(JSON.stringify({ level, message, service: 'agon-web', timestamp: entry.timestamp, serializationError: true }))
+    }
   } else {
     const fn = level === 'error' || level === 'warn' ? console.error : console.log
     fn(`[${level.toUpperCase()}] ${message}`, context ?? '')

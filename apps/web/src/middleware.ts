@@ -71,11 +71,18 @@ export async function middleware(request: NextRequest) {
 
       // Proteger /admin apenas para role admin
       if (path.startsWith('/admin') && session) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', session.user.id)
-          .single()
+        let roleTimeoutId: ReturnType<typeof setTimeout> | undefined
+        const rolePromise = supabase.from('profiles').select('role').eq('id', session.user.id).single()
+        const roleTimeout = new Promise<never>((_, reject) => {
+          roleTimeoutId = setTimeout(() => reject(new Error('Role check timeout')), 5000)
+        })
+        let profile: { role: string } | null = null
+        try {
+          const { data } = await Promise.race([rolePromise, roleTimeout])
+          profile = data
+        } finally {
+          if (roleTimeoutId) clearTimeout(roleTimeoutId)
+        }
 
         const isAdmin = isAdminRole({
           profileRole: profile?.role,
