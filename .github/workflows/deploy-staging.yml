@@ -69,6 +69,10 @@ jobs:
           SENTRY_PROJECT=${{ secrets.SENTRY_PROJECT }}
           GRAFANA_OTLP_ENDPOINT=${{ secrets.STAGING_GRAFANA_OTLP_ENDPOINT }}
           GRAFANA_OTLP_TOKEN=${{ secrets.STAGING_GRAFANA_OTLP_TOKEN }}
+          ADMIN_EMAIL_PRIMARY=${{ secrets.ADMIN_EMAIL_PRIMARY }}
+          ADMIN_EMAIL_BACKUP=${{ secrets.ADMIN_EMAIL_BACKUP }}
+          NEXT_PUBLIC_ADMIN_EMAIL_PRIMARY=${{ secrets.ADMIN_EMAIL_PRIMARY }}
+          NEXT_PUBLIC_ADMIN_EMAIL_BACKUP=${{ secrets.ADMIN_EMAIL_BACKUP }}
           EOF
 
       - name: Copy .env to VPS (staging)
