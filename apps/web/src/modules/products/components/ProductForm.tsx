@@ -14,10 +14,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Loader2, Upload, X, Plus, Package } from 'lucide-react';
+import { Loader2, X, Plus, Package } from 'lucide-react';
 import { toast } from 'sonner';
 import { productSchema, type ProductFormData } from '../schemas';
-import { imageService } from '../services/imageService';
 import { useCategories } from '../hooks/useCategories';
 import type { ProductFormValues, Product } from '../types';
 
@@ -36,8 +35,6 @@ export function ProductForm({
   initialData,
   isLoading,
 }: ProductFormProps) {
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [isUploading, setIsUploading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(
     initialData?.imageUrl || null
   );
@@ -116,39 +113,6 @@ export function ProductForm({
       setImagePreview(null);
     }
   }, [initialData, reset]);
-
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Validate file before upload
-    const validation = imageService.validateImageFile(file);
-    if (!validation.success) {
-      toast.error(validation.error);
-      return;
-    }
-
-    setIsUploading(true);
-    setUploadProgress(0);
-
-    try {
-      const result = await imageService.uploadImage(file, (progress) => {
-        setUploadProgress(progress);
-      });
-
-      setValue('imageUrl', result.url, { shouldValidate: true });
-      setImagePreview(result.url);
-      toast.success('Imagem enviada com sucesso!');
-    } catch (error) {
-      console.error('Image upload error:', error);
-      toast.error(
-        error instanceof Error ? error.message : 'Falha ao enviar imagem'
-      );
-    } finally {
-      setIsUploading(false);
-      setUploadProgress(0);
-    }
-  };
 
   const handleFormSubmit = async (data: ProductFormData) => {
     try {
@@ -345,55 +309,17 @@ export function ProductForm({
               </div>
             )}
 
-            {/* Upload Button */}
-            <div className="flex gap-2">
-              <Input
-                id="imageUrl"
-                type="text"
-                placeholder="URL da imagem"
-                {...register('imageUrl')}
-                className={
-                  errors.imageUrl
-                    ? 'border-destructive focus-visible:ring-destructive'
-                    : ''
-                }
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={isUploading}
-                onClick={() => document.getElementById('file-upload')?.click()}
-                className="shrink-0"
-              >
-                {isUploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Upload className="h-4 w-4" />
-                )}
-              </Button>
-              <input
-                id="file-upload"
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                onChange={handleImageUpload}
-                className="hidden"
-              />
-            </div>
-
-            {/* Upload Progress */}
-            {isUploading && (
-              <div className="space-y-1">
-                <div className="w-full bg-muted rounded-full h-2">
-                  <div
-                    className="bg-primary h-2 rounded-full transition-all duration-300"
-                    style={{ width: `${uploadProgress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Enviando... {uploadProgress}%
-                </p>
-              </div>
-            )}
+            <Input
+              id="imageUrl"
+              type="text"
+              placeholder="URL da imagem"
+              {...register('imageUrl')}
+              className={
+                errors.imageUrl
+                  ? 'border-destructive focus-visible:ring-destructive'
+                  : ''
+              }
+            />
 
             {errors.imageUrl && (
               <p className="text-[10px] text-destructive uppercase font-bold">
@@ -442,14 +368,14 @@ export function ProductForm({
               type="button"
               variant="ghost"
               onClick={onClose}
-              disabled={isLoading || isUploading}
+              disabled={isLoading}
               className="uppercase font-bold tracking-widest text-xs"
             >
               Cancelar
             </Button>
             <Button
               type="submit"
-              disabled={isLoading || isUploading}
+              disabled={isLoading}
               className="uppercase font-bold tracking-widest text-xs min-w-[120px]"
             >
               {isLoading ? (

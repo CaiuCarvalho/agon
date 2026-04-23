@@ -26,7 +26,8 @@ import * as fc from 'fast-check';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL ?? '';
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '';
-const hasSupabaseEnv = !!SUPABASE_URL && !!SUPABASE_ANON_KEY;
+const isRealJwt = (key: string) => key.split('.').length === 3 && !key.endsWith('COMPLETE_WITH_FULL_TOKEN');
+const hasSupabaseEnv = !!SUPABASE_URL && !!SUPABASE_ANON_KEY && isRealJwt(SUPABASE_ANON_KEY);
 
 describe.skipIf(!hasSupabaseEnv)('Preservation Property Tests: Core Flow Stabilization', () => {
   let supabase: ReturnType<typeof createClient>;

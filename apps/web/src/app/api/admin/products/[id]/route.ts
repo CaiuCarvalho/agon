@@ -2,9 +2,9 @@
 // PUT /api/admin/products/[id] - Update product
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAdmin, isApiError } from '@/modules/admin/services/adminService';
-import { updateProduct } from '@/modules/admin/services/productService';
-import { productSchema } from '@/modules/admin/schemas';
+import { validateAdmin, isApiError } from '../../../../../modules/admin/services/adminService';
+import { updateProduct } from '../../../../../modules/admin/services/productService';
+import { productSchema } from '../../../../../modules/admin/schemas';
 
 export async function PUT(
   req: NextRequest,
