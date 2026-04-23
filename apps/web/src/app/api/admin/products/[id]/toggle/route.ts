@@ -2,8 +2,8 @@
 // PATCH /api/admin/products/[id]/toggle - Toggle product soft delete
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAdmin, isApiError } from '@/modules/admin/services/adminService';
-import { toggleProduct } from '@/modules/admin/services/productService';
+import { validateAdmin, isApiError } from '../../../../../../modules/admin/services/adminService';
+import { toggleProduct } from '../../../../../../modules/admin/services/productService';
 
 export async function PATCH(
   req: NextRequest,

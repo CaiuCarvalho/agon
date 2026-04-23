@@ -2,9 +2,9 @@
 // PATCH /api/admin/products/[id]/stock - Update product stock
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAdmin, isApiError } from '@/modules/admin/services/adminService';
-import { updateStock } from '@/modules/admin/services/productService';
-import { stockUpdateSchema } from '@/modules/admin/schemas';
+import { validateAdmin, isApiError } from '../../../../../../modules/admin/services/adminService';
+import { updateStock } from '../../../../../../modules/admin/services/productService';
+import { stockUpdateSchema } from '../../../../../../modules/admin/schemas';
 
 export async function PATCH(
   req: NextRequest,

@@ -2,8 +2,8 @@
 // GET /api/admin/orders/[id] - Get order details by ID
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAdmin, isApiError } from '@/modules/admin/services/adminService';
-import { getOrderDetails } from '@/modules/admin/services/orderService';
+import { validateAdmin, isApiError } from '../../../../../modules/admin/services/adminService';
+import { getOrderDetails } from '../../../../../modules/admin/services/orderService';
 
 export async function GET(
   req: NextRequest,
