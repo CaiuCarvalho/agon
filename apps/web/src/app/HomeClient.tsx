@@ -155,12 +155,10 @@ export default function Home({ initialProducts, productsError }: HomeProps) {
             {/* Lado Esquerdo: Visual Impact */}
             <div className="w-full lg:w-1/2 relative group">
               <div className="aspect-[4/3] rounded-3xl overflow-hidden relative shadow-2xl">
-                <Image 
-                  src="https://res.cloudinary.com/dbcy4h37x/image/upload/v1775188055/brjlfom8l0fuwbsntx8s.jpg" 
-                  alt="Agon Heritage & Community" 
-                  fill
-                  sizes="(max-width: 768px) 100vw, 50vw"
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                <img
+                  src="https://res.cloudinary.com/dbcy4h37x/image/upload/v1775188055/brjlfom8l0fuwbsntx8s.jpg"
+                  alt="Agon Heritage & Community"
+                  className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent opacity-80" />
                 <div className="absolute bottom-8 left-8 right-8">

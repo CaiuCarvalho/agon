@@ -10,7 +10,7 @@ let mockCartState: Cart = {
       price: 350.00,
       quantity: 1,
       size: "M",
-      imageUrl: "https://res.cloudinary.com/demo/image/upload/sample.jpg"
+      imageUrl: ""
     }
   ],
   total: 350.00
@@ -18,8 +18,8 @@ let mockCartState: Cart = {
 
 // Catálogo base para inferência segura de preços (Regra: O frontend manda ID, o mock descobre o preço)
 const mockDatabaseCatalog: Record<string, { name: string; price: number; imageUrl: string }> = {
-  "11111111-1111-1111-1111-111111111111": { name: "Camisa Brasil Titular 2026", price: 350.0, imageUrl: "https://res.cloudinary.com/demo/image/upload/sample.jpg" },
-  "22222222-2222-2222-2222-222222222222": { name: "Agasalho CBF Elite", price: 599.9, imageUrl: "https://res.cloudinary.com/demo/image/upload/sample.jpg" }
+  "11111111-1111-1111-1111-111111111111": { name: "Camisa Brasil Titular 2026", price: 350.0, imageUrl: "" },
+  "22222222-2222-2222-2222-222222222222": { name: "Agasalho CBF Elite", price: 599.9, imageUrl: "" }
 };
 
 export const MOCK_CONFIG = {

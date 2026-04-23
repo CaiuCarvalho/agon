@@ -88,17 +88,6 @@ export interface PaginatedProducts {
 }
 
 /**
- * Image upload response from Cloudinary
- * Contains uploaded image metadata
- */
-export interface ImageUploadResponse {
-  url: string;
-  publicId: string;
-  width: number;
-  height: number;
-}
-
-/**
  * Product database row (snake_case from Supabase)
  * Represents the raw database structure
  */

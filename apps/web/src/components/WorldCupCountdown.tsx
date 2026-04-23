@@ -122,12 +122,10 @@ export default function WorldCupCountdown() {
         <div className="mt-14 md:mt-20 flex flex-col md:flex-row items-center justify-between gap-10 md:gap-16 max-w-5xl mx-auto">
           <div className="flex items-center gap-6 md:gap-8">
             <div className="relative h-20 w-28 md:h-24 md:w-36 shrink-0">
-              <Image
+              <img
                 src="https://res.cloudinary.com/dbcy4h37x/image/upload/v1775188056/ikq1whvviiqvpsoiuxpp.jpg"
                 alt="Copa do Mundo 2026"
-                fill
-                sizes="(max-width: 768px) 112px, 144px"
-                className="object-contain invert brightness-0 opacity-90"
+                className="absolute inset-0 w-full h-full object-contain invert brightness-0 opacity-90"
               />
             </div>
             <div className="text-left">
