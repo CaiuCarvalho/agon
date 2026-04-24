@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Loader2, ArrowRight, Lock, Mail } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { trackLogin } from "@/lib/analytics";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -40,6 +41,7 @@ export function LoginForm({ onToggleToRegister, onToggleToForgot }: LoginFormPro
     setIsLoading(true);
     try {
       await login(data.email, data.password);
+      trackLogin();
       toast.success("Bem-vindo de volta, craque!");
     } catch (error) {
       if (error instanceof Error) {

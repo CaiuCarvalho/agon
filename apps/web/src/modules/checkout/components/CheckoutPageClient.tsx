@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { ShippingForm } from './ShippingForm';
 import { CartSummary } from './CartSummary';
 import { PaymentMethodsDisplay } from '@/modules/payment/components/PaymentMethodsDisplay';
 import { useCheckout } from '../hooks/useCheckout';
 import { ShippingFormValues } from '../contracts';
+import { trackBeginCheckout } from '@/lib/analytics';
 
 interface CartItem {
   id: string;
@@ -26,6 +27,13 @@ interface CheckoutPageClientProps {
 export function CheckoutPageClient({ cartItems, userEmail }: CheckoutPageClientProps) {
   const { submitOrder, isLoading } = useCheckout();
   const submitButtonRef = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    trackBeginCheckout(
+      cartItems.map(i => ({ item_id: i.productId, item_name: i.productName, price: i.productPrice, quantity: i.quantity })),
+      cartItems.reduce((sum, i) => sum + i.productPrice * i.quantity, 0),
+    )
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFormSubmit = async (values: ShippingFormValues) => {
     await submitOrder({

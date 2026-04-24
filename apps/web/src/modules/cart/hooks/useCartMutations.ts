@@ -7,6 +7,7 @@ import { localStorageService } from '../services/localStorageService';
 import { useCallback, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { CartItem, CartItemInput, CartItemIdentifier } from '../types';
+import { trackAddToCart, trackRemoveFromCart } from '@/lib/analytics';
 
 /**
  * useCartMutations Hook
@@ -102,8 +103,11 @@ export function useCartMutations() {
       toast.error('Erro ao adicionar ao carrinho');
       console.error('Add to cart error:', error);
     },
-    onSuccess: () => {
+    onSuccess: (_data, input) => {
       toast.success('Produto adicionado ao carrinho');
+      const cached = queryClient.getQueryData<CartItem[]>(['cart', user?.id]);
+      const added = cached?.find(i => i.productId === input.productId && i.size === input.size);
+      if (added) trackAddToCart({ item_id: added.productId, item_name: added.productNameSnapshot, price: added.priceSnapshot, quantity: input.quantity });
     },
     onSettled: () => {
       // Refetch to ensure consistency with server
@@ -246,6 +250,9 @@ export function useCartMutations() {
       setPendingRemovals((prev) => new Set(prev).add(itemId));
 
       const previousCart = queryClient.getQueryData<CartItem[]>(['cart', user?.id]);
+
+      const removing = previousCart?.find(i => i.id === itemId);
+      if (removing) trackRemoveFromCart({ item_id: removing.productId, item_name: removing.productNameSnapshot, price: removing.priceSnapshot, quantity: removing.quantity });
 
       queryClient.setQueryData<CartItem[]>(['cart', user?.id], (old = []) => {
         return old.filter(item => item.id !== itemId);

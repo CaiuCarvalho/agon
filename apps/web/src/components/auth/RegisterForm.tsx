@@ -9,6 +9,7 @@ import Link from "next/link";
 import { Loader2, UserPlus, Mail, Lock, User, ArrowRight } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
+import { trackSignUp } from "@/lib/analytics";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -51,6 +52,7 @@ export function RegisterForm({ onToggleToLogin }: RegisterFormProps) {
         toast.success("Cadastro criado! Confirme seu e-mail para entrar.");
         return;
       }
+      trackSignUp();
       toast.success("Bem-vindo à Torcida Agon! Aproveite seu manto.");
     } catch (error) {
       if (error instanceof Error) {

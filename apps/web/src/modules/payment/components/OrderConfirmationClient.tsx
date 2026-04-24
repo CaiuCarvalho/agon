@@ -1,8 +1,10 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { CheckCircle, Clock, XCircle, Package, MapPin, Mail, Phone } from 'lucide-react';
 import { validationService } from '@/modules/checkout/services/validationService';
+import { trackPurchase } from '@/lib/analytics';
 
 interface OrderItem {
   productName: string;
@@ -41,6 +43,16 @@ interface OrderConfirmationClientProps {
 
 export function OrderConfirmationClient({ order }: OrderConfirmationClientProps) {
   const paymentStatus = order.payment?.status || 'pending';
+
+  useEffect(() => {
+    if (paymentStatus === 'approved') {
+      trackPurchase(
+        order.id,
+        order.totalAmount,
+        order.items.map(i => ({ item_id: i.productName, item_name: i.productName, price: i.productPrice, quantity: i.quantity })),
+      )
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   
   // Status badge configuration
   const statusConfig = {

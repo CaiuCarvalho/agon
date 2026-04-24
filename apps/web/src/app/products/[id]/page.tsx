@@ -102,8 +102,10 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             </div>
           )}
 
-          <ClientActions 
+          <ClientActions
             productId={product.id}
+            productName={product.name}
+            price={parseFloat(product.price)}
             stock={product.stock}
           />
         </div>

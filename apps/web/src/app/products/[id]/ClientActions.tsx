@@ -1,19 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ShoppingBag, Heart, Loader2, Minus, Plus } from "lucide-react";
 import { useCartMutations } from "@/modules/cart/hooks/useCartMutations";
 import { useWishlistMutations } from "@/modules/wishlist/hooks/useWishlistMutations";
 import { useWishlist } from "@/modules/wishlist/hooks/useWishlist";
 import { useRouter } from "next/navigation";
+import { trackViewItem } from "@/lib/analytics";
 
 interface ClientActionsProps {
   productId: string;
+  productName: string;
+  price: number;
   stock: number;
 }
 
-export default function ClientActions({ productId, stock }: ClientActionsProps) {
+export default function ClientActions({ productId, productName, price, stock }: ClientActionsProps) {
   const [quantity, setQuantity] = useState(1);
+
+  useEffect(() => {
+    trackViewItem({ item_id: productId, item_name: productName, price, quantity: 1 })
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const { addToCart, isAdding } = useCartMutations();
   const { toggleWishlist, isAdding: isTogglingWishlist } = useWishlistMutations();
   const { items: wishlistItems } = useWishlist();
