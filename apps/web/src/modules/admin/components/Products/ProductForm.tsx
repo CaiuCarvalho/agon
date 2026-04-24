@@ -33,6 +33,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [imageHasError, setImageHasError] = useState(false);
 
   useEffect(() => {
     setFormData(buildFormData(product));
@@ -176,14 +177,16 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
         <ImageUpload
           imageUrl={formData.imageUrl}
           onChange={(imageUrl) => setFormData({ ...formData, imageUrl })}
+          onUploadStateChange={setImageHasError}
         />
       </div>
 
       <div className="flex gap-3 pt-4">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || imageHasError}
           className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+          title={imageHasError ? 'Fix the image upload error before saving' : undefined}
         >
           {loading ? 'Saving...' : product ? 'Update Product' : 'Create Product'}
         </button>

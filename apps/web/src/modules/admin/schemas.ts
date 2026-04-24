@@ -6,7 +6,7 @@ import { z } from 'zod';
 export const productSchema = z.object({
   name: z.string().min(1, 'Name is required').max(200),
   description: z.string().min(1, 'Description is required'),
-  price: z.number().min(0, 'Price must be non-negative'),
+  price: z.number().positive('Price must be greater than 0'),
   stock: z.number().int().min(0, 'Stock must be non-negative'),
   /** When true, supplier manages stock and the stock field is ignored for availability */
   unlimitedStock: z.boolean().default(false),
