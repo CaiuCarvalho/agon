@@ -3,6 +3,12 @@ import type { Product } from '../../types';
 import type { ProductInput } from '../../schemas';
 import { ImageUpload } from './ImageUpload';
 
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+}
+
 interface ProductFormProps {
   product: Product | null;
   onSubmit: (data: ProductInput) => Promise<{ success: boolean; error?: string }>;
@@ -16,9 +22,9 @@ function buildFormData(product: Product | null): ProductInput {
     price: product?.price ?? 0,
     stock: product?.stock ?? 0,
     unlimitedStock: product?.unlimitedStock ?? false,
-    category: product?.category ?? '',
+    categoryId: product?.categoryId ?? null,
     sizes: product?.sizes ?? [],
-    images: product?.images ?? [],
+    imageUrl: product?.imageUrl ?? '',
   };
 }
 
@@ -26,26 +32,35 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
   const [formData, setFormData] = useState<ProductInput>(() => buildFormData(product));
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
 
-  // Sync form state when the product being edited changes (modal reuse)
   useEffect(() => {
     setFormData(buildFormData(product));
     setErrors({});
   }, [product?.id]);
-  
+
+  useEffect(() => {
+    fetch('/api/admin/categories')
+      .then((r) => r.json())
+      .then((data) => {
+        if (Array.isArray(data)) setCategories(data);
+      })
+      .catch(() => {});
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setErrors({});
-    
+
     const result = await onSubmit(formData);
     setLoading(false);
-    
+
     if (!result.success && result.error) {
       setErrors({ general: result.error });
     }
   };
-  
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       {errors.general && (
@@ -53,7 +68,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
           {errors.general}
         </div>
       )}
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Name</label>
         <input
@@ -64,7 +79,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
           required
         />
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
         <textarea
@@ -75,7 +90,7 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
           required
         />
       </div>
-      
+
       <div className="grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Price (R$)</label>
@@ -116,38 +131,54 @@ export function ProductForm({ product, onSubmit, onCancel }: ProductFormProps) {
           Estoque ilimitado (dropshipping / fornecedor gerencia)
         </label>
       </div>
-      
+
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-        <input
-          type="text"
-          value={formData.category}
-          onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-          className="w-full px-3 py-2 border rounded-lg"
-          required
-        />
+        <select
+          value={formData.categoryId ?? ''}
+          onChange={(e) =>
+            setFormData({ ...formData, categoryId: e.target.value || null })
+          }
+          className="w-full px-3 py-2 border rounded-lg bg-white"
+        >
+          <option value="">— No category —</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>
+              {c.name}
+            </option>
+          ))}
+        </select>
       </div>
-      
+
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Sizes (comma-separated)</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">
+          Sizes (comma-separated)
+        </label>
         <input
           type="text"
           value={formData.sizes.join(', ')}
-          onChange={(e) => setFormData({ ...formData, sizes: e.target.value.split(',').map(s => s.trim()).filter(Boolean) })}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              sizes: e.target.value
+                .split(',')
+                .map((s) => s.trim())
+                .filter(Boolean),
+            })
+          }
           className="w-full px-3 py-2 border rounded-lg"
           placeholder="P, M, G, GG"
-          required
         />
       </div>
-      
+
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1">Images</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Image</label>
         <ImageUpload
-          images={formData.images}
-          onChange={(images) => setFormData({ ...formData, images })}
+          imageUrl={formData.imageUrl}
+          onChange={(imageUrl) => setFormData({ ...formData, imageUrl })}
         />
       </div>
-      
+
       <div className="flex gap-3 pt-4">
         <button
           type="submit"

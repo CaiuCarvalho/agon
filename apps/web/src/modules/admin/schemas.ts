@@ -10,9 +10,9 @@ export const productSchema = z.object({
   stock: z.number().int().min(0, 'Stock must be non-negative'),
   /** When true, supplier manages stock and the stock field is ignored for availability */
   unlimitedStock: z.boolean().default(false),
-  category: z.string().min(1, 'Category is required'),
-  sizes: z.array(z.string()).min(1, 'At least one size required'),
-  images: z.array(z.string().url()).min(1, 'At least one image required'),
+  categoryId: z.string().uuid('Invalid category').nullable().optional(),
+  sizes: z.array(z.string()),
+  imageUrl: z.string().min(1, 'Image is required'),
 });
 
 /** Used for PATCH / partial updates — all fields optional */
