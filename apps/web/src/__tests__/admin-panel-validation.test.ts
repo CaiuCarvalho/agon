@@ -141,7 +141,7 @@ describe('Admin Panel - Database Migrations', () => {
   const migrationsPath = join(process.cwd(), '../../supabase/migrations');
   
   it('should have shipping fields migration', () => {
-    const path = join(migrationsPath, '20250409_admin_panel_shipping_fields.sql');
+    const path = join(migrationsPath, '20260409000001_admin_panel_shipping_fields.sql');
     expect(existsSync(path), 'Missing shipping fields migration').toBe(true);
     
     const content = readFileSync(path, 'utf-8');
@@ -153,7 +153,7 @@ describe('Admin Panel - Database Migrations', () => {
   });
   
   it('should have webhook RPC update migration', () => {
-    const path = join(migrationsPath, '20250409_update_webhook_rpc_atomic.sql');
+    const path = join(migrationsPath, '20260409000002_update_webhook_rpc_atomic.sql');
     expect(existsSync(path), 'Missing webhook RPC migration').toBe(true);
     
     const content = readFileSync(path, 'utf-8');
@@ -162,7 +162,7 @@ describe('Admin Panel - Database Migrations', () => {
   });
   
   it('should have RLS policies migration', () => {
-    const path = join(migrationsPath, '20250409_admin_panel_rls_policies.sql');
+    const path = join(migrationsPath, '20260409000003_admin_panel_rls_policies.sql');
     expect(existsSync(path), 'Missing RLS policies migration').toBe(true);
     
     const content = readFileSync(path, 'utf-8');

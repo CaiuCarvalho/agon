@@ -23,9 +23,10 @@ function mapRow(p: any): Product {
     price: p.price,
     stock: p.stock,
     unlimitedStock: p.unlimited_stock ?? false,
-    category: p.category,
-    sizes: p.sizes,
-    images: p.images,
+    categoryId: p.category_id ?? null,
+    category: (p.categories as { name: string } | null)?.name ?? '',
+    sizes: p.sizes ?? [],
+    imageUrl: p.image_url ?? '',
     deletedAt: p.deleted_at,
     createdAt: p.created_at,
     updatedAt: p.updated_at,
@@ -55,10 +56,10 @@ export async function listProducts(page: number = 1): Promise<ServiceResult<Prod
       };
     }
 
-    // Get products with pagination
+    // Get products with pagination (join categories for display name)
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('*, categories(name)')
       .order('created_at', { ascending: false })
       .range(offset, offset + PAGE_SIZE - 1);
 
@@ -132,19 +133,20 @@ export async function createProduct(input: ProductInput): Promise<ServiceResult<
         price: input.price,
         stock: input.stock,
         unlimited_stock: input.unlimitedStock ?? false,
-        category: input.category,
+        category_id: input.categoryId ?? null,
         sizes: input.sizes,
-        images: input.images,
+        image_url: input.imageUrl,
       })
-      .select()
+      .select('*, categories(name)')
       .single();
 
     if (error) {
+      console.error('[Product Service] DB insert error:', error);
       return {
         success: false,
         error: {
           code: 'DATABASE_ERROR',
-          message: 'Failed to create product',
+          message: error.message || 'Failed to create product',
         },
       };
     }
@@ -201,21 +203,22 @@ export async function updateProduct(id: string, input: ProductInput): Promise<Se
         price: input.price,
         stock: input.stock,
         unlimited_stock: input.unlimitedStock ?? false,
-        category: input.category,
+        category_id: input.categoryId ?? null,
         sizes: input.sizes,
-        images: input.images,
+        image_url: input.imageUrl,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id)
-      .select()
+      .select('*, categories(name)')
       .single();
 
     if (error) {
+      console.error('[Product Service] DB update error:', error);
       return {
         success: false,
         error: {
           code: 'DATABASE_ERROR',
-          message: 'Failed to update product',
+          message: error.message || 'Failed to update product',
         },
       };
     }
