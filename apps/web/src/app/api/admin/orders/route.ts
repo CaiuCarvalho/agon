@@ -2,9 +2,9 @@
 // GET /api/admin/orders - List orders with pagination and filtering
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAdmin, isApiError } from '@/modules/admin/services/adminService';
-import { listOrders } from '@/modules/admin/services/orderService';
-import { orderFiltersSchema } from '@/modules/admin/schemas';
+import { validateAdmin, isApiError } from '../../../../modules/admin/services/adminService';
+import { listOrders } from '../../../../modules/admin/services/orderService';
+import { orderFiltersSchema } from '../../../../modules/admin/schemas';
 
 export async function GET(req: NextRequest) {
   // Validate admin access

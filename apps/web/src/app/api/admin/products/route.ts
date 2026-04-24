@@ -3,9 +3,9 @@
 // POST /api/admin/products - Create new product
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAdmin, isApiError } from '@/modules/admin/services/adminService';
-import { listProducts, createProduct } from '@/modules/admin/services/productService';
-import { productSchema } from '@/modules/admin/schemas';
+import { validateAdmin, isApiError } from '../../../../modules/admin/services/adminService';
+import { listProducts, createProduct } from '../../../../modules/admin/services/productService';
+import { productSchema } from '../../../../modules/admin/schemas';
 
 export async function GET(req: NextRequest) {
   // Validate admin access

@@ -2,9 +2,9 @@
 // PATCH /api/admin/orders/[id]/shipping - Update shipping information
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAdmin, isApiError } from '@/modules/admin/services/adminService';
-import { updateShipping } from '@/modules/admin/services/fulfillmentService';
-import { shippingUpdateSchema } from '@/modules/admin/schemas';
+import { validateAdmin, isApiError } from '../../../../../../modules/admin/services/adminService';
+import { updateShipping } from '../../../../../../modules/admin/services/fulfillmentService';
+import { shippingUpdateSchema } from '../../../../../../modules/admin/schemas';
 
 export async function PATCH(
   req: NextRequest,

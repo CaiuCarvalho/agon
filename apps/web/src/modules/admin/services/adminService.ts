@@ -80,7 +80,15 @@ export async function validateAdmin(req: NextRequest): Promise<AdminUser | ApiEr
     process.env.ADMIN_EMAIL_PRIMARY,
     process.env.ADMIN_EMAIL_BACKUP,
   ].filter(Boolean);
-  
+
+  if (whitelist.length === 0) {
+    console.error('[CONFIG] ADMIN_EMAIL_PRIMARY and ADMIN_EMAIL_BACKUP are not set. Admin panel is inaccessible until at least one is configured.');
+    return {
+      code: 'FORBIDDEN',
+      message: 'Admin panel is not configured. Contact the system administrator.',
+    };
+  }
+
   const emailValidation = adminEmailSchema.safeParse(user.email);
   if (!emailValidation.success || !whitelist.includes(emailValidation.data)) {
     console.log('[SECURITY] Email not in whitelist:', {
@@ -89,7 +97,7 @@ export async function validateAdmin(req: NextRequest): Promise<AdminUser | ApiEr
       endpoint: req.url,
       action: 'email_not_in_whitelist',
     });
-    
+
     return {
       code: 'FORBIDDEN',
       message: 'Access denied',

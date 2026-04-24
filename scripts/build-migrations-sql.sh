@@ -8,18 +8,30 @@
 #
 # Por padrão ignora APPLY_CHECKOUT_MIGRATIONS.sql (não é migração de
 # timestamp; é só um recorte pré-existente).
+#
+# Após concatenar, passa pelo script make-bundle-idempotent.py para
+# acrescentar DROP IF EXISTS antes de CREATE INDEX/TRIGGER/POLICY e
+# ALTER TABLE ADD CONSTRAINT. Isso deixa o bundle seguro para rodar em
+# prod, onde várias tabelas/índices/policies já existem de aplicação
+# manual no Dashboard.
 
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 MIGRATIONS_DIR="${REPO_ROOT}/supabase/migrations"
+IDEMPOTENT_PY="${REPO_ROOT}/scripts/make-bundle-idempotent.py"
 
 if [[ ! -d "$MIGRATIONS_DIR" ]]; then
   echo "supabase/migrations not found at $MIGRATIONS_DIR" >&2
   exit 1
 fi
+if [[ ! -f "$IDEMPOTENT_PY" ]]; then
+  echo "make-bundle-idempotent.py not found at $IDEMPOTENT_PY" >&2
+  exit 1
+fi
 
-cat <<'HEADER'
+{
+  cat <<'HEADER'
 -- =============================================================================
 -- AGON — CONSOLIDATED SUPABASE MIGRATIONS
 -- Gerado por scripts/build-migrations-sql.sh
@@ -34,19 +46,19 @@ BEGIN;
 
 HEADER
 
-while IFS= read -r file; do
-  # pula o consolidado pré-existente; queremos migrações de timestamp só
-  if [[ "$(basename "$file")" == "APPLY_CHECKOUT_MIGRATIONS.sql" ]]; then
-    continue
-  fi
-  printf -- '\n-- -----------------------------------------------------------------------------\n'
-  printf -- '-- Migration: %s\n' "$(basename "$file")"
-  printf -- '-- -----------------------------------------------------------------------------\n\n'
-  cat "$file"
-  printf '\n'
-done < <(find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name '*.sql' | sort)
+  while IFS= read -r file; do
+    # pula o consolidado pré-existente; queremos migrações de timestamp só
+    if [[ "$(basename "$file")" == "APPLY_CHECKOUT_MIGRATIONS.sql" ]]; then
+      continue
+    fi
+    printf -- '\n-- -----------------------------------------------------------------------------\n'
+    printf -- '-- Migration: %s\n' "$(basename "$file")"
+    printf -- '-- -----------------------------------------------------------------------------\n\n'
+    cat "$file"
+    printf '\n'
+  done < <(find "$MIGRATIONS_DIR" -maxdepth 1 -type f -name '*.sql' | sort)
 
-cat <<'FOOTER'
+  cat <<'FOOTER'
 
 COMMIT;
 
@@ -56,3 +68,4 @@ COMMIT;
 --   SELECT name, deleted_at FROM public.products ORDER BY name LIMIT 5;
 -- =============================================================================
 FOOTER
+} | python3 "$IDEMPOTENT_PY"

@@ -2,8 +2,8 @@
 // GET /api/admin/dashboard - Fetch dashboard metrics
 
 import { NextRequest, NextResponse } from 'next/server';
-import { validateAdmin, isApiError } from '@/modules/admin/services/adminService';
-import { getDashboardMetrics } from '@/modules/admin/services/dashboardService';
+import { validateAdmin, isApiError } from '../../../../modules/admin/services/adminService';
+import { getDashboardMetrics } from '../../../../modules/admin/services/dashboardService';
 
 export async function GET(req: NextRequest) {
   // Validate admin access

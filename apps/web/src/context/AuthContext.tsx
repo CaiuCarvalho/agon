@@ -108,10 +108,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [supabase, router, loadUserProfile]);
 
   const signup = useCallback(async (email: string, password: string, name: string) => {
+    const appUrl =
+      process.env.NEXT_PUBLIC_APP_URL ||
+      (typeof window !== "undefined" ? window.location.origin : "");
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
+        emailRedirectTo: appUrl ? `${appUrl}/auth/callback?next=/perfil` : undefined,
         data: {
           name,
         },

@@ -39,13 +39,6 @@ const clientEnvSchema = z.object({
     .min(1, 'NEXT_PUBLIC_SUPABASE_ANON_KEY is required')
     .startsWith('eyJ', 'NEXT_PUBLIC_SUPABASE_ANON_KEY must be a valid JWT token'),
   
-  NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: z
-    .string()
-    .optional(),
-
-  NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: z
-    .string()
-    .optional(),
 });
 
 /**
@@ -100,8 +93,6 @@ export function validateEnvironment(): void {
     const clientEnv = {
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-      NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
     };
 
     const result = clientEnvSchema.safeParse(clientEnv);
@@ -128,8 +119,6 @@ export function validateEnvironment(): void {
       SUPABASE_ANON_KEY: process.env.SUPABASE_ANON_KEY,
       NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
       NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
-      NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-      NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
       SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     };
 
@@ -157,8 +146,6 @@ export function getClientEnv(): ClientEnv {
   const clientEnv = {
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL!,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
-    NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET: process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET,
   };
 
   return clientEnvSchema.parse(clientEnv);

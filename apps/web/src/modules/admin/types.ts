@@ -79,9 +79,10 @@ export interface Product {
   stock: number;
   /** When true, the supplier manages stock; the stock field is ignored for availability checks */
   unlimitedStock: boolean;
+  categoryId: string | null;
   category: string;
   sizes: string[];
-  images: string[];
+  imageUrl: string;
   deletedAt: string | null;
   createdAt: string;
   updatedAt: string;
